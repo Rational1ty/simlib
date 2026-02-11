@@ -1,19 +1,19 @@
-use simlib::{Executor, Phase};
+use simlib::{Executor, Phase, runge_kutta_4};
 
 #[derive(Debug)]
 struct Simulation {
-	position: f64,
-	velocity: f64,
+	position: (f64, f64),
+	velocity: (f64, f64),
 }
 
 fn main() {
 	let mut sim = Simulation {
-		position: 0.0,
-		velocity: 10.0,
+		position: (0.0, 0.0),
+		velocity: (10.0, 20.0),
 	};
 
 	let dt = 0.1;
-	let end_time = 2.0;
+	let end_time = 5.0;
 
 	let mut exec = Executor::<Simulation>::new(dt, end_time);
 
@@ -23,19 +23,23 @@ fn main() {
 
 	exec.add_job(Phase::Integrate, |sim, time| {
 		// Simple Euler integration for test
-		sim.position += sim.velocity * time.dt;
-		sim.velocity += -9.81 * time.dt; // gravity
+		let state = &[sim.position.0, sim.position.1, sim.velocity.0, sim.velocity.1];
+		let res = runge_kutta_4(state, time.dt, |s| {
+			vec![s[2], s[3], 0.0, -9.81]
+		});
+		sim.position = (res[0], res[1]);
+		sim.velocity = (res[2], res[3]);
 	});
 
 	exec.add_job(Phase::PostIntegrate, |sim, time| {
 		println!(
-			"t={:.2}: pos={:.3}, vel={:.3}",
-			time.t, sim.position, sim.velocity
+			"t={:.2}: pos=({:.2}, {:.2}), vel=({:.2}, {:.2})",
+			time.t, sim.position.0, sim.position.1, sim.velocity.0, sim.velocity.1
 		);
 	});
 
 	exec.add_job(Phase::Shutdown, |sim, time| {
-		println!("Simulation complete. Final position: {:.3} at {:.3} s", sim.position, time.t);
+		println!("Simulation complete. Final position: ({:.2}, {:.2}) at {:.3} s", sim.position.0, sim.position.1, time.t);
 	});
 
 	exec.run(&mut sim);

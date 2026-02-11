@@ -3,8 +3,8 @@ name = "simlib"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-
 [[bin]]
 name = "test_sim_p1"
 path = "src/bin/test_sim_p1.rs"
+
+[dependencies]
