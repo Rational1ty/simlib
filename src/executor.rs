@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::recorder::Recorder;
+
 #[derive(Clone, Copy, Debug)]
 pub struct SimTime {
 	pub t: f64,
@@ -22,6 +24,7 @@ pub struct Executor<S> {
 	time: SimTime,
 	end_time: f64,
 	jobs: HashMap<Phase, Vec<Job<S>>>,
+	recorder: Option<Recorder<S>>,
 }
 
 impl<S> Executor<S> {
@@ -30,6 +33,14 @@ impl<S> Executor<S> {
 			time: SimTime { t: 0.0, dt, step: 0 },
 			end_time,
 			jobs: HashMap::new(),
+			recorder: None,
+		}
+	}
+
+	pub fn with_recorder(dt: f64, end_time: f64, recorder: Recorder<S>) -> Self {
+		Self {
+			recorder: Some(recorder),
+			..Self::new(dt, end_time)
 		}
 	}
 
@@ -53,9 +64,17 @@ impl<S> Executor<S> {
 
 			self.time.step += 1;
 			self.time.t = self.time.dt * self.time.step as f64;
+
+			if let Some(recorder) = &mut self.recorder {
+				recorder.sample(state, self.time.t);
+			}
 		}
 
 		self.run_phase(Phase::Shutdown, state);
+
+		if let Some(recorder) = &self.recorder {
+			recorder.write_csv("output.csv").unwrap();
+		}
 	}
 
 	fn run_phase(&mut self, phase: Phase, state: &mut S) {

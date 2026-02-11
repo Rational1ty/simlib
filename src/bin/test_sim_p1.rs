@@ -1,4 +1,4 @@
-use simlib::{Executor, Phase, runge_kutta_4};
+use simlib::{Executor, Phase, Recorder, runge_kutta_4};
 
 #[derive(Debug)]
 struct Simulation {
@@ -15,7 +15,13 @@ fn main() {
 	let dt = 0.1;
 	let end_time = 5.0;
 
-	let mut exec = Executor::<Simulation>::new(dt, end_time);
+	let mut recorder = Recorder::<Simulation>::new();
+	recorder.track("position_x", |sim| sim.position.0);
+	recorder.track("position_y", |sim| sim.position.1);
+	recorder.track("velocity_x", |sim| sim.velocity.0);
+	recorder.track("velocity_y", |sim| sim.velocity.1);
+
+	let mut exec = Executor::<Simulation>::with_recorder(dt, end_time, recorder);
 
 	exec.add_job(Phase::Init, |sim, time| {
 		println!("Starting simulation at t={} with sim={:?}", time.t, sim);
@@ -43,4 +49,6 @@ fn main() {
 	});
 
 	exec.run(&mut sim);
+
+	println!("Recorded variables saved to output.csv");
 }
