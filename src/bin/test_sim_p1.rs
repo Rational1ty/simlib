@@ -29,10 +29,13 @@ fn main() {
 
 	exec.add_job(Phase::Integrate, |sim, time| {
 		// Simple Euler integration for test
-		let state = &[sim.position.0, sim.position.1, sim.velocity.0, sim.velocity.1];
-		let res = runge_kutta_4(state, time.dt, |s| {
-			vec![s[2], s[3], 0.0, -9.81]
-		});
+		let state = &[
+			sim.position.0,
+			sim.position.1,
+			sim.velocity.0,
+			sim.velocity.1,
+		];
+		let res = runge_kutta_4(state, time.dt, |s| vec![s[2], s[3], 0.0, -9.81]);
 		sim.position = (res[0], res[1]);
 		sim.velocity = (res[2], res[3]);
 	});
@@ -45,7 +48,10 @@ fn main() {
 	});
 
 	exec.add_job(Phase::Shutdown, |sim, time| {
-		println!("Simulation complete. Final position: ({:.2}, {:.2}) at {:.3} s", sim.position.0, sim.position.1, time.t);
+		println!(
+			"Simulation complete. Final position: ({:.2}, {:.2}) at {:.3} s",
+			sim.position.0, sim.position.1, time.t
+		);
 	});
 
 	exec.run(&mut sim);

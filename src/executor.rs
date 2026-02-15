@@ -30,7 +30,11 @@ pub struct Executor<S> {
 impl<S> Executor<S> {
 	pub fn new(dt: f64, end_time: f64) -> Self {
 		Self {
-			time: SimTime { t: 0.0, dt, step: 0 },
+			time: SimTime {
+				t: 0.0,
+				dt,
+				step: 0,
+			},
 			end_time,
 			jobs: HashMap::new(),
 			recorder: None,
@@ -48,10 +52,7 @@ impl<S> Executor<S> {
 	where
 		F: FnMut(&mut S, &SimTime) + 'static,
 	{
-		self.jobs
-			.entry(phase)
-			.or_default()
-			.push(Box::new(job));
+		self.jobs.entry(phase).or_default().push(Box::new(job));
 	}
 
 	pub fn run(&mut self, state: &mut S) {

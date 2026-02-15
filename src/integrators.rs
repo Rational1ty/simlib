@@ -6,19 +6,13 @@ where
 
 	let k1 = derivative(state);
 
-	let y2: Vec<f64> = (0..n)
-		.map(|i| state[i] + 0.5 * dt * k1[i])
-		.collect();
+	let y2: Vec<f64> = (0..n).map(|i| state[i] + 0.5 * dt * k1[i]).collect();
 	let k2 = derivative(&y2);
 
-	let y3: Vec<f64> = (0..n)
-		.map(|i| state[i] + 0.5 * dt * k2[i])
-		.collect();
+	let y3: Vec<f64> = (0..n).map(|i| state[i] + 0.5 * dt * k2[i]).collect();
 	let k3 = derivative(&y3);
 
-	let y4: Vec<f64> = (0..n)
-		.map(|i| state[i] + dt * k3[i])
-		.collect();
+	let y4: Vec<f64> = (0..n).map(|i| state[i] + dt * k3[i]).collect();
 	let k4 = derivative(&y4);
 
 	(0..n)
