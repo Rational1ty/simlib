@@ -1,6 +1,6 @@
 use simlib::{Executor, Phase, Recorder, runge_kutta_4};
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Default)]
 struct Simulation {
 	position: (f64, f64),
 	velocity: (f64, f64),

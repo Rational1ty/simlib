@@ -24,10 +24,11 @@ pub struct Executor<S> {
 	time: SimTime,
 	end_time: f64,
 	jobs: HashMap<Phase, Vec<Job<S>>>,
+	last_state: S,
 	recorder: Option<Recorder<S>>,
 }
 
-impl<S> Executor<S> {
+impl<S: Clone + Default> Executor<S> {
 	pub fn new(dt: f64, end_time: f64) -> Self {
 		Self {
 			time: SimTime {
@@ -37,6 +38,7 @@ impl<S> Executor<S> {
 			},
 			end_time,
 			jobs: HashMap::new(),
+			last_state: S::default(),
 			recorder: None,
 		}
 	}
@@ -57,6 +59,7 @@ impl<S> Executor<S> {
 
 	pub fn run(&mut self, state: &mut S) {
 		self.run_phase(Phase::Init, state);
+		self.last_state = state.clone();
 
 		while self.time.t < self.end_time {
 			self.run_phase(Phase::PreIntegrate, state);
@@ -65,6 +68,9 @@ impl<S> Executor<S> {
 
 			self.time.step += 1;
 			self.time.t = self.time.dt * self.time.step as f64;
+
+			// checkpoint
+			self.last_state = state.clone();
 
 			if let Some(recorder) = &mut self.recorder {
 				recorder.sample(state, self.time.t);
