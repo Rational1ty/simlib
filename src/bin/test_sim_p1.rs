@@ -1,4 +1,4 @@
-use simlib::{Executor, Phase, Recorder, runge_kutta_4};
+use simlib::{Executor, Phase, Recorder};
 
 #[derive(Clone, Debug, Default)]
 struct Simulation {
@@ -27,18 +27,21 @@ fn main() {
 		println!("Starting simulation at t={} with sim={:?}", time.t, sim);
 	});
 
-	exec.add_job(Phase::Integrate, |sim, time| {
-		// Simple Euler integration for test
-		let state = &[
-			sim.position.0,
-			sim.position.1,
-			sim.velocity.0,
-			sim.velocity.1,
-		];
-		let res = runge_kutta_4(state, time.dt, |s| vec![s[2], s[3], 0.0, -9.81]);
-		sim.position = (res[0], res[1]);
-		sim.velocity = (res[2], res[3]);
-	});
+	exec.set_integrator(
+		|sim| {
+			vec![
+				sim.position.0,
+				sim.position.1,
+				sim.velocity.0,
+				sim.velocity.1,
+			]
+		},
+		|s| vec![s[2], s[3], 0.0, -9.81],
+		|sim, s| {
+			sim.position = (s[0], s[1]);
+			sim.velocity = (s[2], s[3]);
+		},
+	);
 
 	exec.add_job(Phase::PostIntegrate, |sim, time| {
 		println!(

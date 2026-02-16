@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::recorder::Recorder;
+use crate::{integrators::Integrator, recorder::Recorder, runge_kutta_4};
 
 #[derive(Clone, Copy, Debug)]
 pub struct SimTime {
@@ -13,7 +13,6 @@ pub struct SimTime {
 pub enum Phase {
 	Init,
 	PreIntegrate,
-	Integrate,
 	PostIntegrate,
 	Shutdown,
 }
@@ -24,6 +23,7 @@ pub struct Executor<S> {
 	time: SimTime,
 	end_time: f64,
 	jobs: HashMap<Phase, Vec<Job<S>>>,
+	integrator: Option<Integrator<S>>,
 	last_state: S,
 	recorder: Option<Recorder<S>>,
 }
@@ -38,6 +38,7 @@ impl<S: Clone + Default> Executor<S> {
 			},
 			end_time,
 			jobs: HashMap::new(),
+			integrator: None,
 			last_state: S::default(),
 			recorder: None,
 		}
@@ -50,6 +51,19 @@ impl<S: Clone + Default> Executor<S> {
 		}
 	}
 
+	pub fn set_integrator<L, D, U>(&mut self, state_loader: L, derivative: D, state_unloader: U)
+	where
+		L: Fn(&S) -> Vec<f64> + 'static,
+		D: Fn(&[f64]) -> Vec<f64> + 'static,
+		U: FnMut(&mut S, &[f64]) + 'static,
+	{
+		self.integrator = Some(Integrator {
+			state_loader: Box::new(state_loader),
+			derivative: Box::new(derivative),
+			state_unloader: Box::new(state_unloader),
+		});
+	}
+
 	pub fn add_job<F>(&mut self, phase: Phase, job: F)
 	where
 		F: FnMut(&mut S, &SimTime) + 'static,
@@ -57,37 +71,49 @@ impl<S: Clone + Default> Executor<S> {
 		self.jobs.entry(phase).or_default().push(Box::new(job));
 	}
 
-	pub fn run(&mut self, state: &mut S) {
-		self.run_phase(Phase::Init, state);
-		self.last_state = state.clone();
+	pub fn run(&mut self, sim: &mut S) {
+		self.run_phase(Phase::Init, sim);
+		self.last_state = sim.clone();
 
 		while self.time.t < self.end_time {
-			self.run_phase(Phase::PreIntegrate, state);
-			self.run_phase(Phase::Integrate, state);
-			self.run_phase(Phase::PostIntegrate, state);
+			self.run_phase(Phase::PreIntegrate, sim);
+
+			if let Some(integrator) = &mut self.integrator {
+				let Integrator {
+					state_loader,
+					derivative,
+					state_unloader,
+				} = integrator;
+
+				let state = state_loader(sim);
+				let integ_result = runge_kutta_4(&state, derivative.as_ref(), self.time.dt);
+				state_unloader(sim, &integ_result);
+			}
+
+			self.run_phase(Phase::PostIntegrate, sim);
 
 			self.time.step += 1;
 			self.time.t = self.time.dt * self.time.step as f64;
 
 			// checkpoint
-			self.last_state = state.clone();
+			self.last_state = sim.clone();
 
 			if let Some(recorder) = &mut self.recorder {
-				recorder.sample(state, self.time.t);
+				recorder.sample(sim, self.time.t);
 			}
 		}
 
-		self.run_phase(Phase::Shutdown, state);
+		self.run_phase(Phase::Shutdown, sim);
 
 		if let Some(recorder) = &self.recorder {
 			recorder.write_csv("output.csv").unwrap();
 		}
 	}
 
-	fn run_phase(&mut self, phase: Phase, state: &mut S) {
+	fn run_phase(&mut self, phase: Phase, sim: &mut S) {
 		if let Some(jobs) = self.jobs.get_mut(&phase) {
 			for job in jobs {
-				job(state, &self.time);
+				job(sim, &self.time);
 			}
 		}
 	}

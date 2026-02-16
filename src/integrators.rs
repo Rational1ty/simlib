@@ -1,4 +1,4 @@
-pub fn runge_kutta_4<F>(state: &[f64], dt: f64, derivative: F) -> Vec<f64>
+pub fn runge_kutta_4<F>(state: &[f64], derivative: F, dt: f64) -> Vec<f64>
 where
 	F: Fn(&[f64]) -> Vec<f64>,
 {
@@ -18,4 +18,10 @@ where
 	(0..n)
 		.map(|i| state[i] + (dt / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]))
 		.collect()
+}
+
+pub struct Integrator<S> {
+	pub state_loader: Box<dyn Fn(&S) -> Vec<f64>>,
+	pub derivative: Box<dyn Fn(&[f64]) -> Vec<f64>>,
+	pub state_unloader: Box<dyn FnMut(&mut S, &[f64])>,
 }

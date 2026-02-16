@@ -12,9 +12,9 @@ Critical path:
 - [x] Domain-agnostic simulation runner/executor (generic over simulation types)
 - [x] Simulation timekeeping
 - [x] Job scheduling
-- [ ] State integration (RK4 and other integrators)
+- [x] State integration (RK4 and other integrators)
 - [x] Variable recording
-- [ ] Last step checkpointing
+- [x] Last step checkpointing
 - [ ] Dynamic events (regula falsi method)
 - [ ] Monte carlo (with `rayon` crate)
 
@@ -31,7 +31,7 @@ Other features:
 
 ## Design
 
-Simulation executor is generic over `S`, the type of the simulation:
+The simulation executor is generic over `S`, the type of the simulation:
 
 ```rust
 struct RocketSimulation {
@@ -60,6 +60,7 @@ Main sim loop:
 
 ```
 run init jobs
+save checkpoint
 
 while t < end_time:
 	run pre-integration jobs
@@ -73,6 +74,7 @@ while t < end_time:
 			integrate to t_event
 			run event job
 	
+	save checkpoint
 	record variables
 
 	step += 1
@@ -87,4 +89,4 @@ save recorded variables to file
 
 - How to handle multiple dynamic events firing within the same time step
 - If the current design scales well to larger and more complex sims
-
+- How to make sure integrator and derivative function always use the same number of state variables
