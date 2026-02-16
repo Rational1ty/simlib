@@ -15,13 +15,14 @@ fn main() {
 	let dt = 0.1;
 	let end_time = 5.0;
 
-	let mut recorder = Recorder::<Simulation>::new("test-sim-output.csv");
+	let mut recorder = Recorder::<Simulation>::new("test-sim.csv");
 	recorder.track("position_x", |sim| sim.position.0);
 	recorder.track("position_y", |sim| sim.position.1);
 	recorder.track("velocity_x", |sim| sim.velocity.0);
 	recorder.track("velocity_y", |sim| sim.velocity.1);
 
-	let mut exec = Executor::<Simulation>::with_recorder(dt, end_time, recorder);
+	let mut exec = Executor::<Simulation>::new(dt, end_time);
+	exec.set_recorder(recorder);
 
 	exec.add_job(Phase::Init, |sim, time| {
 		println!("Starting simulation at t={} with sim={:?}", time.t, sim);

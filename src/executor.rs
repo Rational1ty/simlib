@@ -44,11 +44,8 @@ impl<S: Clone + Default> Executor<S> {
 		}
 	}
 
-	pub fn with_recorder(dt: f64, end_time: f64, recorder: Recorder<S>) -> Self {
-		Self {
-			recorder: Some(recorder),
-			..Self::new(dt, end_time)
-		}
+	pub fn set_recorder(&mut self, recorder: Recorder<S>) {
+		self.recorder = Some(recorder);
 	}
 
 	pub fn set_integrator<L, D, U>(&mut self, state_loader: L, derivative: D, state_unloader: U)
