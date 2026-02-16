@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
+[dev-dependencies]
+glam = "0.32.0"
+
+[lints.clippy]
+needless_return = "allow"
