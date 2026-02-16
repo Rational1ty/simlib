@@ -106,7 +106,7 @@ impl<S: Clone + Default> Executor<S> {
 		self.run_phase(Phase::Shutdown, sim);
 
 		if let Some(recorder) = &self.recorder {
-			recorder.write_csv("output.csv").unwrap();
+			recorder.write_csv().unwrap();
 		}
 	}
 

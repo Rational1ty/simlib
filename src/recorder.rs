@@ -1,21 +1,23 @@
 use std::fs::File;
-use std::io::Write;
-use std::path::Path;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 
 pub struct Recorder<S> {
 	names: Vec<String>,
 	accessors: Vec<Box<dyn Fn(&S) -> f64>>,
 	times: Vec<f64>,
 	data: Vec<Vec<f64>>,
+	file_path: PathBuf,
 }
 
 impl<S> Recorder<S> {
-	pub fn new() -> Self {
+	pub fn new<P: AsRef<Path>>(file_path: P) -> Self {
 		Self {
 			names: Vec::new(),
 			accessors: Vec::new(),
 			times: Vec::new(),
 			data: Vec::new(),
+			file_path: file_path.as_ref().to_path_buf(),
 		}
 	}
 
@@ -33,10 +35,10 @@ impl<S> Recorder<S> {
 		self.data.push(row);
 	}
 
-	pub(crate) fn write_csv<P: AsRef<Path>>(&self, path: P) -> std::io::Result<()> {
+	pub(crate) fn write_csv(&self) -> io::Result<()> {
 		assert!(self.times.len() == self.data.len());
 
-		let mut file = File::create(path)?;
+		let mut file = File::create(&self.file_path)?;
 
 		// header
 		write!(file, "time, ")?;
@@ -49,7 +51,7 @@ impl<S> Recorder<S> {
 				.map(|x| x.to_string())
 				.collect::<Vec<_>>()
 				.join(", ");
-			writeln!(file, "{}, {}", t, data_str)?;
+			writeln!(file, "{t}, {data_str}")?;
 		}
 
 		Ok(())

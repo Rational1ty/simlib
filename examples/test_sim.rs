@@ -15,7 +15,7 @@ fn main() {
 	let dt = 0.1;
 	let end_time = 5.0;
 
-	let mut recorder = Recorder::<Simulation>::new();
+	let mut recorder = Recorder::<Simulation>::new("test-sim-output.csv");
 	recorder.track("position_x", |sim| sim.position.0);
 	recorder.track("position_y", |sim| sim.position.1);
 	recorder.track("velocity_x", |sim| sim.velocity.0);

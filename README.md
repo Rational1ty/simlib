@@ -91,3 +91,4 @@ save recorded variables to file
 - How to handle multiple dynamic events firing within the same time step
 - If the current design scales well to larger and more complex sims
 - How to make sure integrator and derivative function always use the same number of state variables
+- Best way to set up integration/derivative jobs
