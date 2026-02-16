@@ -7,7 +7,7 @@ struct Simulation {
 }
 
 fn main() {
-	let mut sim = Simulation {
+	let sim = Simulation {
 		position: (0.0, 0.0),
 		velocity: (10.0, 20.0),
 	};
@@ -58,7 +58,7 @@ fn main() {
 		);
 	});
 
-	exec.run(&mut sim);
+	exec.run(sim);
 
 	println!("Recorded variables saved to output.csv");
 }

@@ -12,7 +12,7 @@ struct CannonSim {
 }
 
 fn main() {
-	let mut cannon_sim = CannonSim {
+	let cannon_sim = CannonSim {
 		cannon: Cannon::new(PI / 3.0, 50.0),
 	};
 
@@ -70,5 +70,5 @@ fn main() {
 		println!("==============================");
 	});
 
-	exec.run(&mut cannon_sim);
+	exec.run(cannon_sim);
 }

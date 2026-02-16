@@ -68,12 +68,12 @@ impl<S: Clone + Default> Executor<S> {
 		self.jobs.entry(phase).or_default().push(Box::new(job));
 	}
 
-	pub fn run(&mut self, sim: &mut S) {
-		self.run_phase(Phase::Init, sim);
+	pub fn run(&mut self, mut sim: S) {
+		self.run_phase(Phase::Init, &mut sim);
 		self.last_state = sim.clone();
 
 		while self.time.t < self.end_time {
-			self.run_phase(Phase::PreIntegrate, sim);
+			self.run_phase(Phase::PreIntegrate, &mut sim);
 
 			if let Some(integrator) = &mut self.integrator {
 				let Integrator {
@@ -82,12 +82,12 @@ impl<S: Clone + Default> Executor<S> {
 					state_unloader,
 				} = integrator;
 
-				let state = state_loader(sim);
+				let state = state_loader(&mut sim);
 				let integ_result = runge_kutta_4(&state, derivative.as_ref(), self.time.dt);
-				state_unloader(sim, &integ_result);
+				state_unloader(&mut sim, &integ_result);
 			}
 
-			self.run_phase(Phase::PostIntegrate, sim);
+			self.run_phase(Phase::PostIntegrate, &mut sim);
 
 			self.time.step += 1;
 			self.time.t = self.time.dt * self.time.step as f64;
@@ -96,11 +96,11 @@ impl<S: Clone + Default> Executor<S> {
 			self.last_state = sim.clone();
 
 			if let Some(recorder) = &mut self.recorder {
-				recorder.sample(sim, self.time.t);
+				recorder.sample(&sim, self.time.t);
 			}
 		}
 
-		self.run_phase(Phase::Shutdown, sim);
+		self.run_phase(Phase::Shutdown, &mut sim);
 
 		if let Some(recorder) = &self.recorder {
 			recorder.write_csv().unwrap();
