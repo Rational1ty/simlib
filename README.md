@@ -20,6 +20,7 @@ Critical path:
 
 Other features:
 - [ ] Run jobs at different rates
+- [ ] Multiple simobject instances like in Trick
 - [ ] Input files / scripting
 - [ ] Variable server
 - [ ] Arbitrary checkpointing (any point in the sim)
