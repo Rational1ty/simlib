@@ -1,7 +1,7 @@
 mod executor;
-mod integrators;
+mod integrator;
 mod recorder;
 
 pub use executor::{Executor, Phase, SimTime};
-pub use integrators::runge_kutta_4;
+pub use integrator::runge_kutta_4;
 pub use recorder::Recorder;

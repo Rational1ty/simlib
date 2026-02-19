@@ -20,7 +20,8 @@ fn main() {
 	let end_time = 10.0;
 	let mut exec = Executor::<CannonSim>::new(dt, end_time);
 
-	let mut recorder = Recorder::<CannonSim>::new("cannon-sim.csv");
+	let filename = "cannon-sim.csv";
+	let mut recorder = Recorder::<CannonSim>::new(filename);
 	recorder.track("pos_x", |sim| sim.cannon.pos.x);
 	recorder.track("pos_y", |sim| sim.cannon.pos.x);
 	recorder.track("vel_x", |sim| sim.cannon.vel.x);
@@ -39,7 +40,7 @@ fn main() {
 				sim.cannon.vel.y,
 			]
 		},
-		|s| vec![s[2], s[3], 0.0, -9.81],
+		|sim| sim.cannon.derivative(),
 		|sim, s| {
 			sim.cannon.pos.x = s[0];
 			sim.cannon.pos.y = s[1];
@@ -61,14 +62,16 @@ fn main() {
 	});
 
 	exec.add_job(Phase::Shutdown, |sim, time| {
-		println!("==============================");
+		println!("==================================================");
 		println!("Simulation completed at t={:.3}", time.t);
 		println!(
 			"Final cannonball position: ({:.3}, {:.3})",
 			sim.cannon.pos.x, sim.cannon.pos.y
 		);
-		println!("==============================");
+		println!("==================================================");
 	});
 
 	exec.run(cannon_sim);
+
+	println!("Simulation data saved to {filename}");
 }

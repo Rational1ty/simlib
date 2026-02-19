@@ -37,7 +37,7 @@ fn main() {
 				sim.velocity.1,
 			]
 		},
-		|s| vec![s[2], s[3], 0.0, -9.81],
+		|sim| vec![sim.velocity.0, sim.velocity.1, 0.0, -9.81],
 		|sim, s| {
 			sim.position = (s[0], s[1]);
 			sim.velocity = (s[2], s[3]);
@@ -59,6 +59,4 @@ fn main() {
 	});
 
 	exec.run(sim);
-
-	println!("Recorded variables saved to output.csv");
 }

@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{integrators::Integrator, recorder::Recorder, runge_kutta_4};
+use crate::{
+	integrator::{Integrator, runge_kutta_4},
+	recorder::Recorder,
+};
 
 #[derive(Clone, Copy, Debug)]
 pub struct SimTime {
@@ -51,7 +54,7 @@ impl<S: Clone + Default> Executor<S> {
 	pub fn set_integrator<L, D, U>(&mut self, state_loader: L, derivative: D, state_unloader: U)
 	where
 		L: Fn(&S) -> Vec<f64> + 'static,
-		D: Fn(&[f64]) -> Vec<f64> + 'static,
+		D: Fn(&S) -> Vec<f64> + 'static,
 		U: FnMut(&mut S, &[f64]) + 'static,
 	{
 		self.integrator = Some(Integrator {
@@ -82,9 +85,13 @@ impl<S: Clone + Default> Executor<S> {
 					state_unloader,
 				} = integrator;
 
-				let state = state_loader(&mut sim);
-				let integ_result = runge_kutta_4(&state, derivative.as_ref(), self.time.dt);
-				state_unloader(&mut sim, &integ_result);
+				runge_kutta_4(
+					&mut sim,
+					state_loader,
+					derivative,
+					state_unloader,
+					self.time.dt,
+				);
 			}
 
 			self.run_phase(Phase::PostIntegrate, &mut sim);

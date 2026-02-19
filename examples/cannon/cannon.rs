@@ -19,7 +19,7 @@ impl Cannon {
 		}
 	}
 
-	// pub fn derivative(&mut self) -> Vec<f64> {
-	// 	vec![self.acc.x, self.acc.y]
-	// }
+	pub fn derivative(&self) -> Vec<f64> {
+		vec![self.vel.x, self.vel.y, self.acc.x, self.acc.y]
+	}
 }
