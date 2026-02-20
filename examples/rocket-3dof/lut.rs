@@ -1,7 +1,7 @@
 //! Simple lookup table implementations.
 
 /// A one-dimensional lookup table.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Lut1 {
 	// TODO: use NonEmptyVec
 	ts: Vec<f64>,

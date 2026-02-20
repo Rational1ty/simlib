@@ -2,9 +2,9 @@
 
 use crate::lut::Lut1;
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Motor {
-	thrust_curve: Lut1,
+	pub thrust_curve: Lut1,
 }
 
 impl Motor {

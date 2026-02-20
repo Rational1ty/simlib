@@ -4,17 +4,18 @@ use simlib::SimTime;
 use crate::{aero::BodyAeroCoefficients, atmosphere, motor::Motor};
 
 /// A model of a fin-stabilized rocket in two dimensions.
+#[derive(Clone, Debug, Default)]
 pub struct Rocket {
-	coeffs: BodyAeroCoefficients,
-	position: DVec2,     // LCEF m
-	velocity: DVec2,     // LCEF m/s
-	acceleration: DVec2, // LCEF m/s^2
-	orientation: f64,    // rad, angle measured from horizontal (+x axis)
-	angular_vel: f64,    // rad/s
-	angular_accel: f64,  // rad/s^2
-	inertia: f64,        // kg.m^2
-	mass: f64,           // kg
-	motor: Motor,
+	pub coeffs: BodyAeroCoefficients,
+	pub position: DVec2,     // LCEF m
+	pub velocity: DVec2,     // LCEF m/s
+	pub acceleration: DVec2, // LCEF m/s^2
+	pub orientation: f64,    // rad, angle measured from horizontal (+x axis)
+	pub angular_vel: f64,    // rad/s
+	pub angular_accel: f64,  // rad/s^2
+	pub inertia: f64,        // kg.m^2
+	pub mass: f64,           // kg
+	pub motor: Motor,
 }
 
 impl Rocket {
@@ -25,9 +26,10 @@ impl Rocket {
 
 		let alpha = f64::atan2(self.velocity.y, self.velocity.x);
 		let mach = velocity_to_mach(v, self.position.y);
+		// eprintln!("mach = {:#?}", mach);
 
 		// approximations for small AOA
-		let cn = self.coeffs.cn_mach.get(mach) * alpha;
+		let cn = self.coeffs.cn_alpha_mach.get(mach) * alpha;
 		let ca = self.coeffs.ca_mach.get(mach);
 
 		let aero_load = 0.5 * rho * (v * v) * s;
