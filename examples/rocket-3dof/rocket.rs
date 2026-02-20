@@ -24,7 +24,8 @@ impl Rocket {
 		let v = self.velocity.length();
 		let s = self.coeffs.surface_area;
 
-		let alpha = f64::atan2(self.velocity.y, self.velocity.x);
+		let vel_direction = f64::atan2(self.velocity.y, self.velocity.x);
+		let alpha = vel_direction - self.orientation;
 		let mach = velocity_to_mach(v, self.position.y);
 		// eprintln!("mach = {:#?}", mach);
 
@@ -34,14 +35,14 @@ impl Rocket {
 
 		let aero_load = 0.5 * rho * (v * v) * s;
 
-		aero_load * dvec2(ca, cn)
+		aero_load * dvec2(-ca, cn)
 	}
 
 	pub fn derivative(&self, time: &SimTime) -> Vec<f64> {
 		let body_to_lcef_dcm = DMat2::from_angle(self.orientation);
 
 		// translational forces
-		let thrust_body = self.motor.get_thrust(time.t);
+		let thrust_body = dvec2(self.motor.get_thrust(time.t), 0.0);
 
 		let aero_force_body = self.get_aero_force_body();
 		let net_force_body = thrust_body + aero_force_body;

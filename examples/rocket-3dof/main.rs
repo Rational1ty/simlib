@@ -33,13 +33,16 @@ fn main() {
 		inertia: 0.62,
 		mass: 2.3,
 		motor: Motor {
-			thrust_curve: Lut1::new(&[0.0, 0.2, 1.8, 2.0, 20.0], &[500.0, 500.0, 500.0, 0.0, 0.0]),
+			thrust_curve: Lut1::new(
+				&[0.0, 0.2, 1.8, 2.0, 20.0],
+				&[500.0, 500.0, 500.0, 0.0, 0.0],
+			),
 		},
 		..Default::default()
 	};
 
-	let dt = 0.01;
-	let end_time = 10.0;
+	let dt = 0.1;
+	let end_time = 20.0;
 	let mut exec = Executor::<Rocket>::new(dt, end_time);
 
 	exec.set_integrator(
