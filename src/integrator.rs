@@ -1,30 +1,37 @@
+use crate::SimTime;
+
 pub fn runge_kutta_4<S, D, L, U>(
 	sim: &mut S,
 	state_loader: &L,
 	derivative: &D,
 	state_unloader: &mut U,
 	dt: f64,
+	sim_time: &SimTime,
 ) where
-	L: Fn(&S) -> Vec<f64>,
-	D: Fn(&S) -> Vec<f64>,
+	L: Fn(&S, &SimTime) -> Vec<f64>,
+	D: Fn(&S, &SimTime) -> Vec<f64>,
 	U: FnMut(&mut S, &[f64]),
 {
-	let state = state_loader(sim);
+	// we want to pass in the current integration dt to the functions, which might be different from
+	// the simulation's default dt
+	let time = &SimTime { dt, ..*sim_time };
+
+	let state = state_loader(sim, time);
 	let n = state.len();
 
-	let k1 = derivative(sim);
+	let k1 = derivative(sim, time);
 
 	let y2: Vec<f64> = (0..n).map(|i| state[i] + 0.5 * dt * k1[i]).collect();
 	state_unloader(sim, &y2);
-	let k2 = derivative(sim);
+	let k2 = derivative(sim, time);
 
 	let y3: Vec<f64> = (0..n).map(|i| state[i] + 0.5 * dt * k2[i]).collect();
 	state_unloader(sim, &y3);
-	let k3 = derivative(sim);
+	let k3 = derivative(sim, time);
 
 	let y4: Vec<f64> = (0..n).map(|i| state[i] + dt * k3[i]).collect();
 	state_unloader(sim, &y4);
-	let k4 = derivative(sim);
+	let k4 = derivative(sim, time);
 
 	let res: Vec<f64> = (0..n)
 		.map(|i| state[i] + (dt / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]))
@@ -34,7 +41,7 @@ pub fn runge_kutta_4<S, D, L, U>(
 }
 
 pub struct Integrator<S> {
-	pub state_loader: Box<dyn Fn(&S) -> Vec<f64>>,
-	pub derivative: Box<dyn Fn(&S) -> Vec<f64>>,
+	pub state_loader: Box<dyn Fn(&S, &SimTime) -> Vec<f64>>,
+	pub derivative: Box<dyn Fn(&S, &SimTime) -> Vec<f64>>,
 	pub state_unloader: Box<dyn FnMut(&mut S, &[f64])>,
 }

@@ -32,7 +32,7 @@ fn main() {
 	exec.set_recorder(recorder);
 
 	exec.set_integrator(
-		|sim| {
+		|sim, _| {
 			vec![
 				sim.cannon.pos.x,
 				sim.cannon.pos.y,
@@ -40,7 +40,7 @@ fn main() {
 				sim.cannon.vel.y,
 			]
 		},
-		|sim| sim.cannon.derivative(),
+		|sim, _| sim.cannon.derivative(),
 		|sim, s| {
 			sim.cannon.pos.x = s[0];
 			sim.cannon.pos.y = s[1];
