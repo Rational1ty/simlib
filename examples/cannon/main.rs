@@ -64,10 +64,7 @@ fn main() {
 	exec.add_job(Phase::Shutdown, |sim, time| {
 		println!("==================================================");
 		println!("Simulation completed at t={:.3}", time.t);
-		println!(
-			"Final cannonball position: ({:.3}, {:.3})",
-			sim.cannon.pos.x, sim.cannon.pos.y
-		);
+		println!("Final cannonball position: ({:.3}, {:.3})", sim.cannon.pos.x, sim.cannon.pos.y);
 		println!("==================================================");
 	});
 

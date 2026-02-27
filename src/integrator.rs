@@ -15,8 +15,16 @@ pub fn runge_kutta_4<S, D, L, U>(
 	// we want to pass in the current integration dt to the functions, which might be different from
 	// the simulation's default dt
 	let t_0 = &SimTime { dt, ..*sim_time };
-	let t_half = &SimTime { t: sim_time.t + (0.5 * dt), dt, ..*sim_time };
-	let t_full = &SimTime { t: sim_time.t + dt, dt, ..*sim_time };
+	let t_half = &SimTime {
+		t: sim_time.t + (0.5 * dt),
+		dt,
+		..*sim_time
+	};
+	let t_full = &SimTime {
+		t: sim_time.t + dt,
+		dt,
+		..*sim_time
+	};
 
 	let state = state_loader(sim, t_0);
 	let n = state.len();
