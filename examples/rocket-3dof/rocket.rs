@@ -18,20 +18,37 @@ pub struct Rocket {
 	pub motor: Motor,
 }
 
+// AXIS CONVENTIONS:
+//   LCEF (inertial/world): x right, y up
+//   body (rocket frame): x along nose, y to the left of nose
+//   z out of screen for RHR
+//   orientation: 0 along LCEF +x axis, CCW is positive
 impl Rocket {
 	fn get_aero_force_body(&self) -> DVec2 {
-		let rho = atmosphere::get_air_density(self.position.y);
+		let lcef_to_body_dcm = DMat2::from_angle(self.orientation).transpose();
+		let vel_body = lcef_to_body_dcm * self.velocity;
+		// eprintln!("vel_body = {:?}", vel_body);
 		let v = self.velocity.length();
-		let s = self.coeffs.surface_area;
 
-		let vel_direction = f64::atan2(self.velocity.y, self.velocity.x);
-		let alpha = vel_direction - self.orientation;
+		// no velocity => no aero forces
+		if v < 0.1 {
+			return DVec2::ZERO;
+		}
+
+		let alpha = -f64::atan2(vel_body.y, vel_body.x);
+		assert!(
+			alpha.abs() < 10f64.to_radians(),
+			"AOA exceeded allowed range: α={alpha} v_body={vel_body}"
+		);
 		let mach = velocity_to_mach(v, self.position.y);
-		// eprintln!("mach = {:#?}", mach);
+		// assert!(mach < 3.0, "mach was out of range: M={mach} v={v} y={}", self.position.y);
 
 		// approximations for small AOA
-		let cn = self.coeffs.cn_alpha_mach.get(mach) * alpha;
 		let ca = self.coeffs.ca_mach.get(mach);
+		let cn = self.coeffs.cn_alpha_mach.get(mach) * alpha;
+
+		let rho = atmosphere::get_air_density(self.position.y);
+		let s = self.coeffs.surface_area;
 
 		let aero_load = 0.5 * rho * (v * v) * s;
 
@@ -52,7 +69,7 @@ impl Rocket {
 		let net_acceleration_lcef = (body_to_lcef_dcm * net_acceleration_body) + gravity_accel;
 
 		let normal_force = aero_force_body.y;
-		let net_moment = normal_force * (self.coeffs.cp - self.coeffs.cg);
+		let net_moment = normal_force * -(self.coeffs.cp - self.coeffs.cg);
 		let net_angular_accel = net_moment / self.inertia;
 
 		vec![
@@ -67,13 +84,13 @@ impl Rocket {
 }
 
 fn velocity_to_mach(vel: f64, altitude_m: f64) -> f64 {
-	const GAMMA: f64 = 1.4;
-	const R: f64 = 287.05;
+	const GAMMA: f64 = 1.4; // adiabatic index of air
+	const R_AIR: f64 = 287.05; // ideal gas constant for air
 
 	let temperature_degc = atmosphere::get_temperature(altitude_m);
 	let temperature_k = temperature_degc + 273.15;
 
-	let speed_of_sound = f64::sqrt(GAMMA * R * temperature_k);
+	let speed_of_sound = f64::sqrt(GAMMA * R_AIR * temperature_k);
 
 	vel / speed_of_sound
 }

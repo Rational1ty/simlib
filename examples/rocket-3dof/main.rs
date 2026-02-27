@@ -1,7 +1,7 @@
 // TODO: remove this once sim is finished
 #![allow(dead_code)]
 
-use std::f64::consts::PI;
+use std::{cell::Cell, f64::consts::PI};
 
 use glam::dvec2;
 use simlib::{Executor, Phase, Recorder};
@@ -33,15 +33,12 @@ fn main() {
 		inertia: 0.62,
 		mass: 2.3,
 		motor: Motor {
-			thrust_curve: Lut1::new(
-				&[0.0, 0.2, 1.8, 2.0, 20.0],
-				&[500.0, 500.0, 500.0, 0.0, 0.0],
-			),
+			thrust_curve: Lut1::new(&[0.0, 0.2, 1.8, 2.0, 20.0], &[500.0, 500.0, 500.0, 0.0, 0.0]),
 		},
 		..Default::default()
 	};
 
-	let dt = 0.1;
+	let dt = 0.005;
 	let end_time = 20.0;
 	let mut exec = Executor::<Rocket>::new(dt, end_time);
 
@@ -69,12 +66,14 @@ fn main() {
 
 	exec.add_job(Phase::Init, |sim, _| {
 		// simulate launching from a rail
+		sim.orientation = (PI / 2.0) - 0.1; // 90 degrees is vertical
+		// sim.orientation = PI / 2.0;
 		sim.position = dvec2(0.0, 3.0);
-		sim.velocity = dvec2(0.0, 25.0);
-		sim.orientation = PI / 2.0; // 90 degrees is vertical
+		sim.velocity = dvec2(25.0 * sim.orientation.cos(), 25.0 * sim.orientation.sin());
 		sim.angular_vel = 0.0;
 
-		println!("Starting sim with initial state: {:#?}", sim);
+		// println!("Starting sim with initial state: {:#?}", sim);
+		print!("Starting sim");
 	});
 
 	exec.add_job(Phase::PreIntegrate, |sim, time| {
@@ -91,12 +90,16 @@ fn main() {
 		);
 	});
 
-	exec.add_job(Phase::PostIntegrate, |sim, time| {
-		if sim.position.y < 0.0 {
+	let underground = Cell::new(false);
+	let falling = Cell::new(false);
+	exec.add_job(Phase::PostIntegrate, move |sim, time| {
+		if sim.position.y < 0.0 && !underground.get() {
 			eprintln!("Underground! t = {}", time.t);
+			underground.set(true);
 		}
-		if sim.velocity.y < 0.0 {
+		if sim.velocity.y < 0.0 && !falling.get() {
 			eprintln!("Falling down! t = {}", time.t);
+			falling.set(true);
 		}
 	});
 
