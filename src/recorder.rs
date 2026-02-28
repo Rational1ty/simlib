@@ -41,8 +41,8 @@ impl<S> Recorder<S> {
 		let mut file = File::create(&self.file_path)?;
 
 		// header
-		write!(file, "time, ")?;
-		writeln!(file, "{}", self.names.join(", "))?;
+		write!(file, "time,")?;
+		writeln!(file, "{}", self.names.join(","))?;
 
 		// data rows
 		for (t, data) in self.times.iter().zip(&self.data) {
@@ -50,8 +50,8 @@ impl<S> Recorder<S> {
 				.iter()
 				.map(|x| x.to_string())
 				.collect::<Vec<_>>()
-				.join(", ");
-			writeln!(file, "{t}, {data_str}")?;
+				.join(",");
+			writeln!(file, "{t},{data_str}")?;
 		}
 
 		Ok(())
