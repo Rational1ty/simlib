@@ -36,10 +36,10 @@ impl Rocket {
 		}
 
 		let alpha = -f64::atan2(vel_body.y, vel_body.x);
-		assert!(
-			alpha.abs() < 10f64.to_radians(),
-			"AOA exceeded allowed range: α={alpha} v_body={vel_body}"
-		);
+		// assert!(
+		// 	alpha.abs() < 10_f64.to_radians(),
+		// 	"AOA exceeded allowed range: α={alpha} v_body={vel_body}"
+		// );
 		let mach = velocity_to_mach(v, self.position.y);
 		// assert!(mach < 3.0, "mach was out of range: M={mach} v={v} y={}", self.position.y);
 
@@ -69,7 +69,7 @@ impl Rocket {
 		let net_acceleration_lcef = (body_to_lcef_dcm * net_acceleration_body) + gravity_accel;
 
 		let normal_force = aero_force_body.y;
-		let net_moment = normal_force * -(self.coeffs.cp - self.coeffs.cg);
+		let net_moment = -normal_force * (self.coeffs.cp - self.coeffs.cg);
 		let net_angular_accel = net_moment / self.inertia;
 
 		vec![

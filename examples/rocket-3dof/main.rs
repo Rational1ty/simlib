@@ -1,7 +1,7 @@
 // TODO: remove this once sim is finished
 #![allow(dead_code)]
 
-use std::{cell::Cell, f64::consts::PI};
+use std::cell::Cell;
 
 use glam::dvec2;
 use simlib::{Executor, Phase, Recorder};
@@ -38,8 +38,8 @@ fn main() {
 		..Default::default()
 	};
 
-	let dt = 0.005;
-	let end_time = 20.0;
+	let dt = 0.01;
+	let end_time = 35.0;
 	let mut exec = Executor::<Rocket>::new(dt, end_time);
 
 	exec.set_integrator(
@@ -66,17 +66,22 @@ fn main() {
 
 	exec.add_job(Phase::Init, |sim, _| {
 		// simulate launching from a rail
-		sim.orientation = (PI / 2.0) - 0.1; // 90 degrees is vertical
+		sim.orientation = 85_f64.to_radians(); // 90 degrees is vertical
 		// sim.orientation = PI / 2.0;
 		sim.position = dvec2(0.0, 3.0);
 		sim.velocity = dvec2(25.0 * sim.orientation.cos(), 25.0 * sim.orientation.sin());
 		sim.angular_vel = 0.0;
 
 		// println!("Starting sim with initial state: {:#?}", sim);
-		print!("Starting sim");
+		println!("Starting sim");
 	});
 
 	exec.add_job(Phase::PreIntegrate, |sim, time| {
+		let steps_per_sec = (1.0 / time.dt).round() as u64;
+		if time.step % steps_per_sec != 0 {
+			return;
+		}
+
 		let Rocket {
 			position,
 			velocity,
@@ -85,7 +90,7 @@ fn main() {
 			..
 		} = &sim;
 		println!(
-			"t={:.2} | pos=({:.3}, {:.3}) vel=({:.3}, {:.3}) orientation={:.3} angular_vel={:.3}",
+			"t={:.3} | pos=({:.3}, {:.3}) vel=({:.3}, {:.3}) orientation={:.3} angular_vel={:.3}",
 			time.t, position.x, position.y, velocity.x, velocity.y, orientation, angular_vel
 		);
 	});
@@ -94,11 +99,11 @@ fn main() {
 	let falling = Cell::new(false);
 	exec.add_job(Phase::PostIntegrate, move |sim, time| {
 		if sim.position.y < 0.0 && !underground.get() {
-			eprintln!("Underground! t = {}", time.t);
+			println!("Underground! t = {}", time.t);
 			underground.set(true);
 		}
 		if sim.velocity.y < 0.0 && !falling.get() {
-			eprintln!("Falling down! t = {}", time.t);
+			println!("Falling down! t = {}", time.t);
 			falling.set(true);
 		}
 	});

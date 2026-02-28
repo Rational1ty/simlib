@@ -57,7 +57,7 @@ impl Lut1 {
 	/// Returns a value from the lookup table, or one of the endpoints if the argument is
 	/// outside the valid range.
 	///
-	/// This function behaves the same as [`Lut1::get`] but will not panic if `t` is outside the
+	/// This function behaves the same as [`Lut1::get()`] but will not panic if `t` is outside the
 	/// range of the lookup table. Instead, it will return either the first element if `t < ts[0]`
 	/// or the last element if `t > ts[-1]`.
 	pub fn saturating_get(&self, t: f64) -> f64 {
