@@ -9,6 +9,6 @@ pub struct Motor {
 
 impl Motor {
 	pub fn get_thrust(&self, t: f64) -> f64 {
-		self.thrust_curve.get(t)
+		self.thrust_curve.saturating_get(t)
 	}
 }

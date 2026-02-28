@@ -11,12 +11,21 @@ pub struct Lut1 {
 impl Lut1 {
 	pub fn new(ts: &[f64], data: &[f64]) -> Self {
 		assert!(ts.len() == data.len());
+		assert!(ts.is_sorted());
 		Self {
 			ts: ts.to_vec(),
 			data: data.to_vec(),
 		}
 	}
 
+	/// Returns a value from the lookup table.
+	///
+	/// If the requested value `t` is between two points, then the value is computed by linear
+	/// interpolation.
+	///
+	/// # Panics
+	///
+	/// Panics if `t` is outside the range of the lookup table.
 	pub fn get(&self, t: f64) -> f64 {
 		if t < self.ts[0] || t > self.ts[self.ts.len() - 1] {
 			panic!("requested value {t} is outside Lut1 range");
@@ -44,10 +53,26 @@ impl Lut1 {
 
 		y0 + t_fraction * (y1 - y0)
 	}
+
+	/// Returns a value from the lookup table, or one of the endpoints if the argument is
+	/// outside the valid range.
+	///
+	/// This function behaves the same as [`Lut1::get`] but will not panic if `t` is outside the
+	/// range of the lookup table. Instead, it will return either the first element if `t < ts[0]`
+	/// or the last element if `t > ts[-1]`.
+	pub fn saturating_get(&self, t: f64) -> f64 {
+		if t < self.ts[0] {
+			return self.data[0];
+		}
+		if t > self.ts[self.ts.len() - 1] {
+			return self.data[self.data.len() - 1];
+		}
+		self.get(t)
+	}
 }
 
 /// A two-dimensional lookup table.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Lut2 {
 	dim: (usize, usize), // the dimensions of the LUT (# points along each axis)
 	ts: Vec<f64>,        // coordinates along dimension 0
@@ -58,6 +83,7 @@ pub struct Lut2 {
 impl Lut2 {
 	pub fn new(ts: &[f64], us: &[f64], data: &[f64]) -> Self {
 		assert!(ts.len() * us.len() == data.len());
+		assert!(ts.is_sorted() && us.is_sorted());
 		Self {
 			dim: (ts.len(), us.len()),
 			ts: ts.to_vec(),
