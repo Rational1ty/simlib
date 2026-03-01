@@ -52,7 +52,8 @@ impl Motor {
 		assert!(*thrust_pts.last().unwrap() == 0.0, "final point must have a thrust of zero");
 
 		let max_thrust = *thrust_pts.iter().max_by(|a, b| a.total_cmp(b)).unwrap();
-		let end_of_thrust = thrust_pts.len() - 1 - thrust_pts
+		let end_of_thrust = thrust_pts.len()
+			- 1 - thrust_pts
 			.iter()
 			.rev()
 			.position(|thrust| *thrust <= 0.05 * max_thrust)

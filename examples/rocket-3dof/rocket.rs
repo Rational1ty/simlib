@@ -65,7 +65,9 @@ impl Rocket {
 		let net_force_body = thrust_body + aero_force_body;
 
 		let gravity_accel = dvec2(0.0, -9.81);
-		let net_acceleration_body = net_force_body / self.mass;
+		let mass = self.mass + self.motor.total_weight_kg
+			- (self.motor.prop_weight_kg * (time.t / self.motor.burn_time_end).min(1.0));
+		let net_acceleration_body = net_force_body / mass;
 		let net_acceleration_lcef = (body_to_lcef_dcm * net_acceleration_body) + gravity_accel;
 
 		let normal_force = aero_force_body.y;

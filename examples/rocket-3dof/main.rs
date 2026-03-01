@@ -15,6 +15,9 @@ mod motor;
 mod rocket;
 
 fn main() {
+	let motor = Motor::from_eng_file("I280.eng").unwrap();
+	println!("{motor:?}");
+
 	// this is modeled roughly after an IRIS 4 rocket with an H/I motor
 	let sim = Rocket {
 		coeffs: BodyAeroCoefficients {
@@ -31,11 +34,8 @@ fn main() {
 			),
 		},
 		inertia: 0.62,
-		mass: 2.3,
-		motor: Motor {
-			thrust_curve: Lut1::new(&[0.0, 0.2, 1.8, 2.0, 20.0], &[500.0, 500.0, 500.0, 0.0, 0.0]),
-			..Default::default()
-		},
+		mass: 2.0,
+		motor,
 		..Default::default()
 	};
 
