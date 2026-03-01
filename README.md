@@ -69,12 +69,15 @@ while t < end_time:
 	run post-integration jobs
 
 	for each dynamic_event job:
-		run error function
-		if value changed sign:
-			rewind to previous time step
-			integrate to t_event
-			run event job
-	
+		run tgo function
+
+	for each finite tgo < 0 (sorted ):
+		rewind to previous time step
+		while tgo != 0:
+			integrate to tgo
+			re-evaluate event
+		run event job
+
 	save checkpoint
 	record variables
 
