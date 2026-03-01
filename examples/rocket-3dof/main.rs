@@ -34,6 +34,7 @@ fn main() {
 		mass: 2.3,
 		motor: Motor {
 			thrust_curve: Lut1::new(&[0.0, 0.2, 1.8, 2.0, 20.0], &[500.0, 500.0, 500.0, 0.0, 0.0]),
+			..Default::default()
 		},
 		..Default::default()
 	};
