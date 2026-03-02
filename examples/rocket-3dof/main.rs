@@ -1,12 +1,14 @@
 // TODO: remove this once sim is finished
 #![allow(dead_code)]
 
-use std::cell::Cell;
-
-use glam::dvec2;
 use simlib::{Executor, Phase, Recorder};
 
-use crate::{aero::BodyAeroCoefficients, lut::Lut1, motor::Motor, rocket::Rocket};
+use crate::{
+	aero::BodyAeroCoefficients,
+	lut::Lut1,
+	motor::Motor,
+	rocket::{FlightPhase, Rail, Rocket, velocity_to_mach},
+};
 
 mod aero;
 mod atmosphere;
@@ -16,7 +18,10 @@ mod rocket;
 
 fn main() {
 	let motor = Motor::from_eng_file("I280.eng").unwrap();
-	println!("{motor:?}");
+	let rail = Rail {
+		angle: 85_f64.to_radians(),
+		length: 3.084, // 10 feet
+	};
 
 	// this is modeled roughly after an IRIS 4 rocket with an H/I motor
 	let sim = Rocket {
@@ -36,6 +41,7 @@ fn main() {
 		inertia: 0.62,
 		mass: 2.0,
 		motor,
+		rail,
 		..Default::default()
 	};
 
@@ -66,15 +72,11 @@ fn main() {
 	);
 
 	exec.add_job(Phase::Init, |sim, _| {
-		// simulate launching from a rail
-		sim.orientation = 85_f64.to_radians(); // 90 degrees is vertical
-		// sim.orientation = PI / 2.0;
-		sim.position = dvec2(0.0, 3.0);
-		sim.velocity = dvec2(25.0 * sim.orientation.cos(), 25.0 * sim.orientation.sin());
-		sim.angular_vel = 0.0;
-
 		// println!("Starting sim with initial state: {:#?}", sim);
-		println!("Starting sim");
+		sim.orientation = sim.rail.angle;
+		println!("Starting rocket sim");
+		println!("  motor: {}", sim.motor.designation);
+		println!("  rail: {} m at {:.2}°", sim.rail.length, 90.0 - sim.rail.angle.to_degrees());
 	});
 
 	exec.add_job(Phase::PreIntegrate, |sim, time| {
@@ -96,16 +98,21 @@ fn main() {
 		);
 	});
 
-	let underground = Cell::new(false);
-	let falling = Cell::new(false);
+	let mut prev_phase = FlightPhase::OnRail;
 	exec.add_job(Phase::PostIntegrate, move |sim, time| {
-		if sim.position.y < 0.0 && !underground.get() {
-			println!("Underground! t = {}", time.t);
-			underground.set(true);
+		if sim.flight_phase == FlightPhase::Boost && time.t > sim.motor.burn_time_end {
+			sim.flight_phase = FlightPhase::Coast;
 		}
-		if sim.velocity.y < 0.0 && !falling.get() {
-			println!("Falling down! t = {}", time.t);
-			falling.set(true);
+		if sim.flight_phase == FlightPhase::Coast && sim.velocity.y < 0.0 {
+			sim.flight_phase = FlightPhase::Descent;
+		}
+		if sim.flight_phase == FlightPhase::Descent && sim.position.y <= 0.0 {
+			sim.flight_phase = FlightPhase::Ground;
+		}
+
+		if sim.flight_phase != prev_phase {
+			println!("Phase {:?}, t = {}", sim.flight_phase, time.t);
+			prev_phase = sim.flight_phase;
 		}
 	});
 
@@ -119,6 +126,7 @@ fn main() {
 	recorder.track("orientation", |sim| sim.orientation);
 	recorder.track("angular_vel", |sim| sim.angular_vel);
 	recorder.track("angular_accel", |sim| sim.angular_accel);
+	recorder.track("mach", |sim| velocity_to_mach(sim.velocity.length(), sim.position.y));
 
 	exec.set_recorder(recorder);
 

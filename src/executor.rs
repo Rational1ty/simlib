@@ -53,8 +53,8 @@ impl<S: Clone + Default> Executor<S> {
 
 	pub fn set_integrator<L, D, U>(&mut self, state_loader: L, derivative: D, state_unloader: U)
 	where
-		L: Fn(&S, &SimTime) -> Vec<f64> + 'static,
-		D: Fn(&S, &SimTime) -> Vec<f64> + 'static,
+		L: Fn(&mut S, &SimTime) -> Vec<f64> + 'static,
+		D: Fn(&mut S, &SimTime) -> Vec<f64> + 'static,
 		U: FnMut(&mut S, &[f64]) + 'static,
 	{
 		self.integrator = Some(Integrator {

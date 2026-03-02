@@ -3,6 +3,28 @@ use simlib::SimTime;
 
 use crate::{aero::BodyAeroCoefficients, atmosphere, motor::Motor};
 
+#[derive(Clone, Debug, Default)]
+pub struct Rail {
+	pub angle: f64,  // rad
+	pub length: f64, // m
+}
+
+impl Rail {
+	pub fn direction(&self) -> DVec2 {
+		dvec2(self.angle.cos(), self.angle.sin())
+	}
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum FlightPhase {
+	#[default]
+	OnRail,
+	Boost,
+	Coast,
+	Descent,
+	Ground,
+}
+
 /// A model of a fin-stabilized rocket in two dimensions.
 #[derive(Clone, Debug, Default)]
 pub struct Rocket {
@@ -15,7 +37,9 @@ pub struct Rocket {
 	pub angular_accel: f64,  // rad/s^2
 	pub inertia: f64,        // kg.m^2
 	pub mass: f64,           // kg
+	pub flight_phase: FlightPhase,
 	pub motor: Motor,
+	pub rail: Rail,
 }
 
 // AXIS CONVENTIONS:
@@ -55,7 +79,7 @@ impl Rocket {
 		aero_load * dvec2(-ca, cn)
 	}
 
-	pub fn derivative(&self, time: &SimTime) -> Vec<f64> {
+	pub fn derivative(&mut self, time: &SimTime) -> Vec<f64> {
 		let body_to_lcef_dcm = DMat2::from_angle(self.orientation);
 
 		// translational forces
@@ -69,6 +93,27 @@ impl Rocket {
 			- (self.motor.prop_weight_kg * (time.t / self.motor.burn_time_end).min(1.0));
 		let net_acceleration_body = net_force_body / mass;
 		let net_acceleration_lcef = (body_to_lcef_dcm * net_acceleration_body) + gravity_accel;
+
+		if self.flight_phase == FlightPhase::OnRail {
+			let rail_dir = self.rail.direction();
+			let pos_along_rail = self.position.dot(rail_dir);
+
+			if pos_along_rail < self.rail.length {
+				let accel_parallel = net_acceleration_lcef.dot(rail_dir).max(0.0);
+				let accel_on_rail = rail_dir * accel_parallel;
+
+				return vec![
+					self.velocity.x,
+					self.velocity.y,
+					accel_on_rail.x,
+					accel_on_rail.y,
+					0.0, // can't rotate while on rail
+					0.0, // can't rotate while on rail
+				];
+			}
+
+			self.flight_phase = FlightPhase::Boost;
+		}
 
 		let normal_force = aero_force_body.y;
 		let net_moment = -normal_force * (self.coeffs.cp - self.coeffs.cg);
@@ -85,7 +130,7 @@ impl Rocket {
 	}
 }
 
-fn velocity_to_mach(vel: f64, altitude_m: f64) -> f64 {
+pub fn velocity_to_mach(vel: f64, altitude_m: f64) -> f64 {
 	const GAMMA: f64 = 1.4; // adiabatic index of air
 	const R_AIR: f64 = 287.05; // ideal gas constant for air
 
