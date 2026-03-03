@@ -8,8 +8,8 @@ pub fn runge_kutta_4<S, D, L, U>(
 	dt: f64,
 	sim_time: &SimTime,
 ) where
-	L: Fn(&S, &SimTime) -> Vec<f64>,
-	D: Fn(&S, &SimTime) -> Vec<f64>,
+	L: Fn(&mut S, &SimTime) -> Vec<f64>,
+	D: Fn(&mut S, &SimTime) -> Vec<f64>,
 	U: FnMut(&mut S, &[f64]),
 {
 	// we want to pass in the current integration dt to the functions, which might be different from
@@ -51,7 +51,7 @@ pub fn runge_kutta_4<S, D, L, U>(
 }
 
 pub struct Integrator<S> {
-	pub state_loader: Box<dyn Fn(&S, &SimTime) -> Vec<f64>>,
-	pub derivative: Box<dyn Fn(&S, &SimTime) -> Vec<f64>>,
+	pub state_loader: Box<dyn Fn(&mut S, &SimTime) -> Vec<f64>>,
+	pub derivative: Box<dyn Fn(&mut S, &SimTime) -> Vec<f64>>,
 	pub state_unloader: Box<dyn FnMut(&mut S, &[f64])>,
 }
