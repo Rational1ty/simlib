@@ -1,4 +1,4 @@
-use glam::{DMat2, DVec2, dvec2};
+use glam::{DQuat, DVec3, dvec3};
 use simlib::SimTime;
 
 use crate::{aero::BodyAeroCoefficients, atmosphere, motor::Motor};
@@ -10,8 +10,12 @@ pub struct Rail {
 }
 
 impl Rail {
-	pub fn direction(&self) -> DVec2 {
-		dvec2(self.angle.cos(), self.angle.sin())
+	pub fn direction(&self) -> DVec3 {
+		dvec3(self.angle.cos(), 0.0, self.angle.sin())
+	}
+
+	pub fn initial_orientation(&self) -> DQuat {
+		DQuat::from_rotation_y(self.angle)
 	}
 }
 
@@ -25,17 +29,17 @@ pub enum FlightPhase {
 	Ground,
 }
 
-/// A model of a fin-stabilized rocket in two dimensions.
+/// A model of a fin-stabilized rocket in three dimensions.
 #[derive(Clone, Debug, Default)]
 pub struct Rocket {
 	pub coeffs: BodyAeroCoefficients,
-	pub position: DVec2,     // LCEF m
-	pub velocity: DVec2,     // LCEF m/s
-	pub acceleration: DVec2, // LCEF m/s^2
-	pub orientation: f64,    // rad, angle measured from horizontal (+x axis)
-	pub angular_vel: f64,    // rad/s
-	pub angular_accel: f64,  // rad/s^2
-	pub inertia: f64,        // kg.m^2
+	pub position: DVec3,     // ENU m
+	pub velocity: DVec3,     // ENU m/s
+	pub acceleration: DVec3, // ENU m/s^2
+	pub orientation: DQuat,  // body to ENU
+	pub angular_vel: DVec3,  // body rad/s
+	pub angular_accel: DVec3, // body rad/s^2
+	pub inertia: DVec3,      // kg.m^2, principal moments
 	pub mass: f64,           // kg
 	pub flight_phase: FlightPhase,
 	pub motor: Motor,
@@ -43,89 +47,64 @@ pub struct Rocket {
 }
 
 // AXIS CONVENTIONS:
-//   LCEF (inertial/world): x right, y up
-//   body (rocket frame): x along nose, y to the left of nose
-//   z out of screen for RHR
-//   orientation: 0 along LCEF +x axis, CCW is positive
+//   ENU (inertial/world): x east, y north, z up
+//   body (rocket frame): +x along nose axis
 impl Rocket {
-	fn get_aero_force_body(&self) -> DVec2 {
-		let lcef_to_body_dcm = DMat2::from_angle(self.orientation).transpose();
-		let vel_body = lcef_to_body_dcm * self.velocity;
-		// eprintln!("vel_body = {:?}", vel_body);
-		let v = self.velocity.length();
-
-		// no velocity => no aero forces
-		if v < 0.1 {
-			return DVec2::ZERO;
-		}
-
-		let alpha = -f64::atan2(vel_body.y, vel_body.x);
-		// assert!(
-		// 	alpha.abs() < 10_f64.to_radians(),
-		// 	"AOA exceeded allowed range: α={alpha} v_body={vel_body}"
-		// );
-		let mach = velocity_to_mach(v, self.position.y);
-		// assert!(mach < 3.0, "mach was out of range: M={mach} v={v} y={}", self.position.y);
-
-		// approximations for small AOA
-		let ca = self.coeffs.ca_mach.get(mach);
-		let cn = self.coeffs.cn_alpha_mach.get(mach) * alpha;
-
-		let rho = atmosphere::get_air_density(self.position.y);
-		let s = self.coeffs.surface_area;
-
-		let aero_load = 0.5 * rho * (v * v) * s;
-
-		aero_load * dvec2(-ca, cn)
-	}
-
 	pub fn derivative(&mut self, time: &SimTime) -> Vec<f64> {
-		let body_to_lcef_dcm = DMat2::from_angle(self.orientation);
+		let _ = time;
 
-		// translational forces
-		let thrust_body = dvec2(self.motor.get_thrust(time.t), 0.0);
-
-		let aero_force_body = self.get_aero_force_body();
-		let net_force_body = thrust_body + aero_force_body;
-
-		let gravity_accel = dvec2(0.0, -9.81);
-		let mass = self.mass + self.motor.total_weight_kg
-			- (self.motor.prop_weight_kg * (time.t / self.motor.burn_time_end).min(1.0));
-		let net_acceleration_body = net_force_body / mass;
-		let net_acceleration_lcef = (body_to_lcef_dcm * net_acceleration_body) + gravity_accel;
+		// First 6DOF pass: translation only (gravity), no thrust/aero, no rotational dynamics.
+		let gravity_accel = dvec3(0.0, 0.0, -9.81);
+		let _mass = self.mass + self.motor.total_weight_kg;
+		let net_acceleration_enu = gravity_accel;
 
 		if self.flight_phase == FlightPhase::OnRail {
 			let rail_dir = self.rail.direction();
 			let pos_along_rail = self.position.dot(rail_dir);
 
 			if pos_along_rail < self.rail.length {
-				let accel_parallel = net_acceleration_lcef.dot(rail_dir).max(0.0);
+				let accel_parallel = net_acceleration_enu.dot(rail_dir).max(0.0);
 				let accel_on_rail = rail_dir * accel_parallel;
+				self.acceleration = accel_on_rail;
+				self.angular_accel = DVec3::ZERO;
 
 				return vec![
 					self.velocity.x,
 					self.velocity.y,
+					self.velocity.z,
 					accel_on_rail.x,
 					accel_on_rail.y,
-					0.0, // can't rotate while on rail
-					0.0, // can't rotate while on rail
+					accel_on_rail.z,
+					0.0,
+					0.0,
+					0.0,
+					0.0,
+					0.0,
+					0.0,
+					0.0,
 				];
 			}
 
 			self.flight_phase = FlightPhase::Boost;
 		}
 
-		let normal_force = aero_force_body.y;
-		let net_moment = -normal_force * (self.coeffs.cp - self.coeffs.cg);
-		let net_angular_accel = net_moment / self.inertia;
+		self.acceleration = net_acceleration_enu;
+		self.angular_accel = DVec3::ZERO;
 
 		vec![
 			self.velocity.x,
 			self.velocity.y,
-			net_acceleration_lcef.x,
-			net_acceleration_lcef.y,
-			self.angular_vel,
-			net_angular_accel,
+			self.velocity.z,
+			net_acceleration_enu.x,
+			net_acceleration_enu.y,
+			net_acceleration_enu.z,
+			0.0,
+			0.0,
+			0.0,
+			0.0,
+			0.0,
+			0.0,
+			0.0,
 		]
 	}
 }
