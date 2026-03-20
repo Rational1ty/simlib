@@ -15,7 +15,7 @@ impl Rail {
 	}
 
 	pub fn initial_orientation(&self) -> DQuat {
-		DQuat::from_rotation_y(self.angle)
+		DQuat::from_rotation_y(-self.angle)
 	}
 }
 
@@ -51,12 +51,12 @@ pub struct Rocket {
 //   body (rocket frame): +x along nose axis
 impl Rocket {
 	pub fn derivative(&mut self, time: &SimTime) -> Vec<f64> {
-		let _ = time;
-
-		// First 6DOF pass: translation only (gravity), no thrust/aero, no rotational dynamics.
+		// First 6DOF pass: translation only (thrust + gravity), no aero, no rotational dynamics.
 		let gravity_accel = dvec3(0.0, 0.0, -9.81);
-		let _mass = self.mass + self.motor.total_weight_kg;
-		let net_acceleration_enu = gravity_accel;
+		let mass = self.mass + self.motor.total_weight_kg;
+		let thrust_body = dvec3(self.motor.get_thrust(time.t), 0.0, 0.0);
+		let thrust_enu = self.orientation * thrust_body;
+		let net_acceleration_enu = (thrust_enu / mass) + gravity_accel;
 
 		if self.flight_phase == FlightPhase::OnRail {
 			let rail_dir = self.rail.direction();
