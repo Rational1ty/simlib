@@ -50,6 +50,32 @@ pub struct Rocket {
 //   ENU (inertial/world): x east, y north, z up
 //   body (rocket frame): +x along nose axis
 impl Rocket {
+	/// Computes `q̇ = (1/2) q ⨂ ω_q`,
+	/// where
+	/// - `q` is the rocket's orientation quaternion
+	/// - `ω_q` is the rocket's angular rate as a quaternion `[ω, 0]`
+	fn quaternion_derivative(body_to_enu: DQuat, omega_body: DVec3) -> DQuat {
+		let qv = body_to_enu.xyz();
+		let qv_dot = 0.5 * ((body_to_enu.w * omega_body) + qv.cross(omega_body));
+		let qw_dot = -0.5 * qv.dot(omega_body);
+
+		DQuat::from_xyzw(qv_dot.x, qv_dot.y, qv_dot.z, qw_dot)
+	}
+
+	/// Solves for `ω_dot` in the equation `M = Iω_dot + ω ⨉ (Iω)`.
+	fn angular_accel_body(&self, net_moment_body: DVec3) -> DVec3 {
+		let inertia = self.inertia;
+		let omega = self.angular_vel;
+		let i_omega = self.inertia * self.angular_vel;
+		let coriolis = omega.cross(i_omega);
+
+		dvec3(
+			(net_moment_body.x - coriolis.x) / inertia.x,
+			(net_moment_body.y - coriolis.y) / inertia.y,
+			(net_moment_body.z - coriolis.z) / inertia.z,
+		)
+	}
+
 	fn get_aero_force_body(&self) -> DVec3 {
 		let body_to_enu = self.orientation;
 		let vel_body = body_to_enu.conjugate() * self.velocity;
@@ -60,16 +86,26 @@ impl Rocket {
 		}
 
 		let rho = atmosphere::get_air_density(self.position.z.max(0.0));
-		let q_s = 0.5 * rho * self.coeffs.surface_area;
+		let q_s = 0.5 * rho * v * v * self.coeffs.surface_area;
 
-		dvec3(
-			-q_s * self.coeffs.c_x * vel_body.x.abs() * vel_body.x,
-			-q_s * self.coeffs.c_y * vel_body.y.abs() * vel_body.y,
-			-q_s * self.coeffs.c_z * vel_body.z.abs() * vel_body.z,
-		)
+		// For this simplified 6DOF pass, treat c_y and c_z as linear side/normal force slopes.
+		let alpha = f64::atan2(-vel_body.z, vel_body.x);
+		let beta = f64::atan2(vel_body.y, vel_body.x);
+
+		let force_x = -q_s * self.coeffs.c_x * vel_body.x.signum();
+		let force_y = -q_s * self.coeffs.c_y * beta;
+		let force_z = -q_s * self.coeffs.c_z * alpha;
+
+		dvec3(force_x, force_y, force_z)
 	}
 
 	pub fn derivative(&mut self, time: &SimTime) -> Vec<f64> {
+		if self.flight_phase == FlightPhase::Ground {
+			self.acceleration = DVec3::ZERO;
+			self.angular_accel = DVec3::ZERO;
+			return vec![0.0; 13];
+		}
+
 		let body_to_enu = self.orientation;
 
 		let gravity_accel = dvec3(0.0, 0.0, -9.81);
@@ -79,6 +115,12 @@ impl Rocket {
 
 		let aero_force_body = self.get_aero_force_body();
 		let aero_force_enu = body_to_enu * aero_force_body;
+
+		let moment_arm = dvec3(self.coeffs.cp - self.coeffs.cg, 0.0, 0.0);
+		let aero_moment_body = moment_arm.cross(aero_force_body);
+		let net_angular_accel_body = self.angular_accel_body(aero_moment_body);
+
+		let quat_dot = Self::quaternion_derivative(body_to_enu, self.angular_vel);
 
 		let mass = self.mass + self.motor.total_weight_kg;
 		let net_acceleration_enu = ((thrust_enu + aero_force_enu) / mass) + gravity_accel;
@@ -114,7 +156,7 @@ impl Rocket {
 		}
 
 		self.acceleration = net_acceleration_enu;
-		self.angular_accel = DVec3::ZERO;
+		self.angular_accel = net_angular_accel_body;
 
 		vec![
 			self.velocity.x,
@@ -123,13 +165,13 @@ impl Rocket {
 			net_acceleration_enu.x,
 			net_acceleration_enu.y,
 			net_acceleration_enu.z,
-			0.0,
-			0.0,
-			0.0,
-			0.0,
-			0.0,
-			0.0,
-			0.0,
+			quat_dot.x,
+			quat_dot.y,
+			quat_dot.z,
+			quat_dot.w,
+			net_angular_accel_body.x,
+			net_angular_accel_body.y,
+			net_angular_accel_body.z,
 		]
 	}
 }

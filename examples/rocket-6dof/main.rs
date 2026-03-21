@@ -26,6 +26,8 @@ fn main() {
 	// this is modeled roughly after an IRIS 4 rocket with an H/I motor
 	let sim = Rocket {
 		coeffs: BodyAeroCoefficients {
+			cp: 1.625,
+			cg: 1.466,
 			surface_area: 8.13e-3,
 			c_x: 0.75,
 			c_y: 2.0,
