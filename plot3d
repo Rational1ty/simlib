@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
-import pandas as pd
 import sys
+import typing
+
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial.transform import Rotation
 
 
@@ -18,7 +21,7 @@ z = df['pos_z']
 
 fig = plt.figure(figsize=(16, 8), )
 gs = fig.add_gridspec(2, 2)
-ax = fig.add_subplot(gs[:, 0], projection='3d')
+ax = typing.cast(Axes3D, fig.add_subplot(gs[:, 0], projection='3d'))
 ax.plot(x, y, z)
 
 max_range = max(
@@ -38,6 +41,16 @@ ax.set_xlabel('x (m)')
 ax.set_ylabel('y (m)')
 ax.set_zlabel('z (m)')
 ax.set_title('Trajectory')
+
+ax.scatter([0], [0], 0, color='red', marker='o')
+
+ground_x, ground_y = np.meshgrid(
+    np.linspace(mid_x - max_range, mid_x + max_range, 10),
+    np.linspace(mid_y - max_range, mid_y + max_range, 10),
+)
+ground_z = np.full(ground_x.shape, 0.0)
+
+ax.plot_surface(ground_x, ground_y, ground_z, color='black', alpha=0.5)
 
 # add orientation vectors
 q = df[['q_x', 'q_y', 'q_z', 'q_w']].values

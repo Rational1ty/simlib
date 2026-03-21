@@ -50,13 +50,38 @@ pub struct Rocket {
 //   ENU (inertial/world): x east, y north, z up
 //   body (rocket frame): +x along nose axis
 impl Rocket {
+	fn get_aero_force_body(&self) -> DVec3 {
+		let body_to_enu = self.orientation;
+		let vel_body = body_to_enu.conjugate() * self.velocity;
+		let v = vel_body.length();
+
+		if v < 0.1 {
+			return DVec3::ZERO;
+		}
+
+		let rho = atmosphere::get_air_density(self.position.z.max(0.0));
+		let q_s = 0.5 * rho * self.coeffs.surface_area;
+
+		dvec3(
+			-q_s * self.coeffs.c_x * vel_body.x.abs() * vel_body.x,
+			-q_s * self.coeffs.c_y * vel_body.y.abs() * vel_body.y,
+			-q_s * self.coeffs.c_z * vel_body.z.abs() * vel_body.z,
+		)
+	}
+
 	pub fn derivative(&mut self, time: &SimTime) -> Vec<f64> {
-		// First 6DOF pass: translation only (thrust + gravity), no aero, no rotational dynamics.
+		let body_to_enu = self.orientation;
+
 		let gravity_accel = dvec3(0.0, 0.0, -9.81);
-		let mass = self.mass + self.motor.total_weight_kg;
+
 		let thrust_body = dvec3(self.motor.get_thrust(time.t), 0.0, 0.0);
-		let thrust_enu = self.orientation * thrust_body;
-		let net_acceleration_enu = (thrust_enu / mass) + gravity_accel;
+		let thrust_enu = body_to_enu * thrust_body;
+
+		let aero_force_body = self.get_aero_force_body();
+		let aero_force_enu = body_to_enu * aero_force_body;
+
+		let mass = self.mass + self.motor.total_weight_kg;
+		let net_acceleration_enu = ((thrust_enu + aero_force_enu) / mass) + gravity_accel;
 
 		if self.flight_phase == FlightPhase::OnRail {
 			let rail_dir = self.rail.direction();

@@ -27,9 +27,9 @@ fn main() {
 	let sim = Rocket {
 		coeffs: BodyAeroCoefficients {
 			surface_area: 8.13e-3,
-			c_x: 0.0,
-			c_y: 0.0,
-			c_z: 0.0,
+			c_x: 0.75,
+			c_y: 2.0,
+			c_z: 2.0,
 		},
 		inertia: dvec3(0.62, 0.62, 0.01),
 		mass: 2.0,
