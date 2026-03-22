@@ -18,58 +18,7 @@ mod motor;
 mod rocket;
 
 fn main() {
-	let aoa_axis = [
-		0.0,
-		5_f64.to_radians(),
-		10_f64.to_radians(),
-	];
-	let mach_axis = [0.0, 0.025, 0.12, 0.4, 0.6, 1.0, 1.1, 1.27, 2.0, 3.0];
-	let ca_mach = Lut1::new(
-		&[0.0, 0.025, 0.12, 0.4, 1.0, 1.1, 1.27, 3.0],
-		&[1.95, 0.85, 0.73, 0.75, 0.91, 0.96, 0.84, 0.62],
-	);
-	let cn_alpha_mach = Lut1::new(
-		&[0.0, 0.4, 0.6, 1.0, 1.2, 1.32, 1.4, 2.0, 3.0],
-		&[21.0, 21.27, 21.66, 23.12, 23.84, 23.48, 22.72, 14.22, 9.5],
-	);
-
-	let mut c_x_data = Vec::with_capacity(aoa_axis.len() * mach_axis.len());
-	let mut c_y_data = Vec::with_capacity(aoa_axis.len() * mach_axis.len());
-	let mut c_z_data = Vec::with_capacity(aoa_axis.len() * mach_axis.len());
-	let aoa_soft_limit = 8_f64.to_radians();
-	for &aoa in &aoa_axis {
-		for &mach in &mach_axis {
-			let ca = ca_mach.saturating_get(mach);
-			let cn_linear = cn_alpha_mach.saturating_get(mach) * aoa;
-			let cn = cn_linear / (1.0 + (aoa / aoa_soft_limit).powi(2));
-			c_x_data.push(ca);
-			c_y_data.push(cn);
-			c_z_data.push(cn);
-		}
-	}
-
-	let motor = Motor::from_eng_file("I280.eng").unwrap();
-	let rail = Rail {
-		angle: 85_f64.to_radians(),
-		length: 3.084, // 10 feet
-	};
-
-	// this is modeled roughly after an IRIS 4 rocket with an H/I motor
-	let sim = Rocket {
-		coeffs: BodyAeroCoefficients {
-			cp: 1.625,
-			cg: 1.466,
-			surface_area: 8.13e-3,
-			cx_alpha_mach: Lut2::new(&aoa_axis, &mach_axis, &c_x_data),
-			cy_beta_mach: Lut2::new(&aoa_axis, &mach_axis, &c_y_data),
-			cz_alpha_mach: Lut2::new(&aoa_axis, &mach_axis, &c_z_data),
-		},
-		inertia: dvec3(0.62, 0.62, 0.01),
-		mass: 2.0,
-		motor,
-		rail,
-		..Default::default()
-	};
+	let sim = get_telemachus_config();
 
 	let dt = 0.01;
 	let end_time = 30.0;
@@ -188,7 +137,111 @@ fn main() {
 	recorder.track("alpha_z", |sim| sim.angular_accel.z);
 	recorder.track("mach", |sim| velocity_to_mach(sim.velocity.length(), sim.position.z));
 
+	// sim health metrics
+	recorder.track("alpha", |sim| f64::atan2(-sim.velocity.z, sim.velocity.x).to_degrees());
+	recorder.track("beta", |sim| {
+		f64::atan2(sim.velocity.y, f64::hypot(sim.velocity.x, sim.velocity.z)).to_degrees()
+	});
+
 	exec.set_recorder(recorder);
 
 	exec.run(sim);
+}
+
+fn get_iris4_config() -> Rocket {
+	let aoa_axis = [0.0, 5_f64.to_radians(), 10_f64.to_radians()];
+	let mach_axis = [0.0, 0.025, 0.12, 0.4, 0.6, 1.0, 1.1, 1.27, 2.0, 3.0];
+	let ca_mach = Lut1::new(
+		&[0.0, 0.025, 0.12, 0.4, 1.0, 1.1, 1.27, 3.0],
+		&[1.95, 0.85, 0.73, 0.75, 0.91, 0.96, 0.84, 0.62],
+	);
+	let cn_alpha_mach = Lut1::new(
+		&[0.0, 0.4, 0.6, 1.0, 1.2, 1.32, 1.4, 2.0, 3.0],
+		&[21.0, 21.27, 21.66, 23.12, 23.84, 23.48, 22.72, 14.22, 9.5],
+	);
+
+	let mut c_x_data = Vec::with_capacity(aoa_axis.len() * mach_axis.len());
+	let mut c_y_data = Vec::with_capacity(aoa_axis.len() * mach_axis.len());
+	let mut c_z_data = Vec::with_capacity(aoa_axis.len() * mach_axis.len());
+	let aoa_soft_limit = 8_f64.to_radians();
+	for &aoa in &aoa_axis {
+		for &mach in &mach_axis {
+			let ca = ca_mach.saturating_get(mach);
+			let cn_linear = cn_alpha_mach.saturating_get(mach) * aoa;
+			let cn = cn_linear / (1.0 + (aoa / aoa_soft_limit).powi(2));
+			c_x_data.push(ca);
+			c_y_data.push(cn);
+			c_z_data.push(cn);
+		}
+	}
+
+	let motor = Motor::from_eng_file("I280.eng").unwrap();
+	let rail = Rail {
+		angle: 85_f64.to_radians(),
+		length: 3.084, // 10 feet
+	};
+
+	// this is modeled roughly after an IRIS 4 rocket with an H/I motor
+	Rocket {
+		coeffs: BodyAeroCoefficients {
+			cp: 1.625,
+			cg: 1.466,
+			surface_area: 8.13e-3,
+			cx_alpha_mach: Lut2::new(&aoa_axis, &mach_axis, &c_x_data),
+			cy_beta_mach: Lut2::new(&aoa_axis, &mach_axis, &c_y_data),
+			cz_alpha_mach: Lut2::new(&aoa_axis, &mach_axis, &c_z_data),
+		},
+		inertia: dvec3(0.62, 0.62, 0.01),
+		mass: 2.0,
+		motor,
+		rail,
+		..Default::default()
+	}
+}
+
+fn get_telemachus_config() -> Rocket {
+	let tele_coeffs = BodyAeroCoefficients {
+		cp: 2.425,
+		cg: 1.851,
+		surface_area: 18.258e-3,
+		..Default::default()
+	};
+
+	let tele_coeffs = read_hdf5("tele.hdf5", tele_coeffs).unwrap();
+
+	let rail = Rail {
+		angle: 85_f64.to_radians(),
+		length: 5.0,
+	};
+
+	let motor = Motor::from_eng_file("O3400.eng").unwrap();
+
+	Rocket {
+		coeffs: tele_coeffs,
+		mass: 18.991,
+		inertia: dvec3(0.061, 18.4, 18.4),
+		rail,
+		motor,
+		..Default::default()
+	}
+}
+
+fn read_hdf5(filename: &str, config: BodyAeroCoefficients) -> hdf5::Result<BodyAeroCoefficients> {
+	let file = hdf5::File::open(filename)?;
+
+	let angle: Vec<f64> = file.dataset("alpha")?.read_raw()?;
+	let mach: Vec<f64> = file.dataset("mach")?.read_raw()?;
+	let cx: Vec<f64> = file.dataset("ca/off")?.read_raw()?;
+	let cy: Vec<f64> = file.dataset("cy/off")?.read_raw()?;
+	let cz: Vec<f64> = file.dataset("cn/off")?.read_raw()?;
+
+	eprintln!("angle = {:?}", angle);
+	eprintln!("mach = {:?} .. {:?}", &mach[0..5], &mach[mach.len() - 5..]);
+
+	Ok(BodyAeroCoefficients {
+		cx_alpha_mach: Lut2::new(&angle, &mach, &cx),
+		cy_beta_mach: Lut2::new(&angle, &mach, &cy),
+		cz_alpha_mach: Lut2::new(&angle, &mach, &cz),
+		..config
+	})
 }

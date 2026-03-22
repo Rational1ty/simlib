@@ -92,9 +92,13 @@ impl Rocket {
 		let beta = f64::atan2(vel_body.y, f64::hypot(vel_body.x, vel_body.z));
 		let mach = velocity_to_mach(v, self.position.z.max(0.0));
 
-		let c_x = self.coeffs.cx_alpha_mach.get(alpha.abs(), mach);
-		let c_y = self.coeffs.cy_beta_mach.get(beta.abs(), mach);
-		let c_z = self.coeffs.cz_alpha_mach.get(alpha.abs(), mach);
+		if mach < 0.01 {
+			return DVec3::ZERO;
+		}
+
+		let c_x = self.coeffs.cx_alpha_mach.get(alpha.abs().to_degrees(), mach);
+		let c_y = self.coeffs.cy_beta_mach.get(beta.abs().to_degrees(), mach);
+		let c_z = self.coeffs.cz_alpha_mach.get(alpha.abs().to_degrees(), mach);
 
 		let force_x = -q_s * c_x;
 		let force_y = -q_s * c_y * beta.signum();
