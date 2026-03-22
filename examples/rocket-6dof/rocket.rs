@@ -33,14 +33,14 @@ pub enum FlightPhase {
 #[derive(Clone, Debug, Default)]
 pub struct Rocket {
 	pub coeffs: BodyAeroCoefficients,
-	pub position: DVec3,     // ENU m
-	pub velocity: DVec3,     // ENU m/s
-	pub acceleration: DVec3, // ENU m/s^2
-	pub orientation: DQuat,  // body to ENU
-	pub angular_vel: DVec3,  // body rad/s
+	pub position: DVec3,      // ENU m
+	pub velocity: DVec3,      // ENU m/s
+	pub acceleration: DVec3,  // ENU m/s^2
+	pub orientation: DQuat,   // body to ENU
+	pub angular_vel: DVec3,   // body rad/s
 	pub angular_accel: DVec3, // body rad/s^2
-	pub inertia: DVec3,      // kg.m^2, principal moments
-	pub mass: f64,           // kg
+	pub inertia: DVec3,       // kg.m^2, principal moments
+	pub mass: f64,            // kg
 	pub flight_phase: FlightPhase,
 	pub motor: Motor,
 	pub rail: Rail,
@@ -88,13 +88,17 @@ impl Rocket {
 		let rho = atmosphere::get_air_density(self.position.z.max(0.0));
 		let q_s = 0.5 * rho * v * v * self.coeffs.surface_area;
 
-		// For this simplified 6DOF pass, treat c_y and c_z as linear side/normal force slopes.
 		let alpha = f64::atan2(-vel_body.z, vel_body.x);
-		let beta = f64::atan2(vel_body.y, vel_body.x);
+		let beta = f64::atan2(vel_body.y, f64::hypot(vel_body.x, vel_body.z));
+		let mach = velocity_to_mach(v, self.position.z.max(0.0));
 
-		let force_x = -q_s * self.coeffs.c_x * vel_body.x.signum();
-		let force_y = -q_s * self.coeffs.c_y * beta;
-		let force_z = -q_s * self.coeffs.c_z * alpha;
+		let c_x = self.coeffs.cx_alpha_mach.get(alpha.abs(), mach);
+		let c_y = self.coeffs.cy_beta_mach.get(beta.abs(), mach);
+		let c_z = self.coeffs.cz_alpha_mach.get(alpha.abs(), mach);
+
+		let force_x = -q_s * c_x;
+		let force_y = -q_s * c_y * beta.signum();
+		let force_z = -q_s * c_z * alpha.signum();
 
 		dvec3(force_x, force_y, force_z)
 	}
