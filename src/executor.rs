@@ -95,10 +95,10 @@ impl<S: Clone + Default> Executor<S> {
 				);
 			}
 
-			self.run_phase(Phase::PostIntegrate, &mut sim);
-
 			self.time.step += 1;
 			self.time.t = self.time.dt * self.time.step as f64;
+
+			self.run_phase(Phase::PostIntegrate, &mut sim);
 
 			// checkpoint
 			self.last_state = sim.clone();
