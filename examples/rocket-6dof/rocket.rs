@@ -45,6 +45,7 @@ pub struct Rocket {
 	pub flight_phase: FlightPhase,
 	pub motor: Motor,
 	pub rail: Rail,
+	pub wind: DVec3, // ENU m/s
 }
 
 // AXIS CONVENTIONS:
@@ -79,8 +80,11 @@ impl Rocket {
 
 	fn get_aero_force_body(&self) -> DVec3 {
 		let body_to_enu = self.orientation;
-		let vel_body = body_to_enu.conjugate() * self.velocity;
-		let v = vel_body.length();
+		let enu_to_body = body_to_enu.conjugate();
+
+		let vel_air_enu = self.velocity - self.wind;
+		let vel_air_body = enu_to_body * vel_air_enu;
+		let v = vel_air_body.length();
 
 		if v < 0.1 {
 			return DVec3::ZERO;
@@ -89,8 +93,8 @@ impl Rocket {
 		let rho = atmosphere::get_air_density(self.position.z.max(0.0));
 		let q_s = 0.5 * rho * v * v * self.coeffs.surface_area;
 
-		let alpha = f64::atan2(vel_body.z, vel_body.x);
-		let beta = f64::atan2(vel_body.y, f64::hypot(vel_body.x, vel_body.z));
+		let alpha = f64::atan2(vel_air_body.z, vel_air_body.x);
+		let beta = f64::atan2(vel_air_body.y, f64::hypot(vel_air_body.x, vel_air_body.z));
 		let mach = velocity_to_mach(v, self.position.z.max(0.0));
 
 		if mach < 0.01 {

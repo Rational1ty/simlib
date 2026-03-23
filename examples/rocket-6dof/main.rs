@@ -18,10 +18,10 @@ mod motor;
 mod rocket;
 
 fn main() {
-	let sim = get_iris4_config();
+	let sim = get_telemachus_config();
 
 	let dt = 0.01;
-	let end_time = 30.0;
+	let end_time = 70.0;
 	let mut exec = Executor::<Rocket>::new(dt, end_time);
 
 	exec.set_integrator(
@@ -168,7 +168,7 @@ fn get_iris4_config() -> Rocket {
 	let iris_coeffs = read_hdf5("iris4.hdf5", iris_config).unwrap();
 
 	let rail = Rail {
-		angle: 85_f64.to_radians(),
+		angle: 80_f64.to_radians(),
 		azimuth: 30_f64.to_radians(),
 		length: 3.084, // 10 feet
 	};
@@ -180,6 +180,7 @@ fn get_iris4_config() -> Rocket {
 		inertia: dvec3(1.34e-2, 0.61, 0.61),
 		rail,
 		motor,
+		wind: dvec3(3.0, 0.0, 0.0),
 		..Default::default()
 	}
 }
@@ -208,6 +209,7 @@ fn get_telemachus_config() -> Rocket {
 		inertia: dvec3(0.061, 18.4, 18.4),
 		rail,
 		motor,
+		wind: dvec3(3.0, -4.0, 0.0),
 		..Default::default()
 	}
 }
