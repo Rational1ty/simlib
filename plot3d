@@ -19,7 +19,7 @@ x = df['pos_x']
 y = df['pos_y']
 z = df['pos_z']
 
-fig = plt.figure(figsize=(16, 8), )
+fig = plt.figure(figsize=(16, 8))
 gs = fig.add_gridspec(2, 2)
 ax = typing.cast(Axes3D, fig.add_subplot(gs[:, 0], projection='3d'))
 ax.plot(x, y, z)

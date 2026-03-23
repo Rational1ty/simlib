@@ -66,10 +66,19 @@ impl Rocket {
 		// );
 		let mach = velocity_to_mach(v, self.position.y);
 		// assert!(mach < 3.0, "mach was out of range: M={mach} v={v} y={}", self.position.y);
+		if mach < 0.01 {
+			return DVec2::ZERO;
+		}
 
-		// approximations for small AOA
-		let ca = self.coeffs.ca_mach.get(mach);
-		let cn = self.coeffs.cn_alpha_mach.get(mach) * alpha;
+		let ca = self
+			.coeffs
+			.ca_alpha_mach
+			.saturating_get(alpha.abs().to_degrees(), mach);
+		let cn = self
+			.coeffs
+			.cn_alpha_mach
+			.saturating_get(alpha.abs().to_degrees(), mach)
+			* alpha.signum();
 
 		let rho = atmosphere::get_air_density(self.position.y);
 		let s = self.coeffs.surface_area;

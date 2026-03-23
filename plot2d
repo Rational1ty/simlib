@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+
+import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+
+df = pd.read_csv(sys.argv[1])
+
+df['v'] = np.sqrt(df['vel_x']**2 + df['vel_y']**2)
+df['a'] = np.sqrt(df['acc_x']**2 + df['acc_y']**2)
+
+x = df['pos_x']
+y = df['pos_y']
+
+fig = plt.figure(figsize=(16, 8))
+gs = fig.add_gridspec(2, 2)
+ax = fig.add_subplot(gs[:, 0])
+ax.plot(x, y, zorder=0)
+
+max_range = max(
+    x.max() - x.min(),
+    y.max() - y.min()
+) / 2
+max_range += 0.1 * max_range
+
+mid_x = (x.max() + x.min()) / 2
+mid_y = (y.max() + y.min()) / 2
+
+ax.set_xlim(mid_x - max_range, mid_x + max_range)
+ax.set_ylim(mid_y - max_range, mid_y + max_range)
+ax.set_xlabel('x (m)')
+ax.set_ylabel('y (m)')
+ax.set_title('Trajectory')
+ax.set_aspect('equal', adjustable='box')
+
+ax.scatter([0], [0], color='red', marker='o')
+ax.axhline(0.0, color='black', linestyle='--')
+
+# add orientation vectors
+orientation = df['orientation']
+
+dirs = np.vstack((np.cos(orientation), np.sin(orientation))).T
+body_vec = np.array([1, 0])
+
+step = round(0.05 * max_range)
+xs, ys = x[::step], y[::step]
+us, vs = dirs[::step].T
+
+ax.quiver(xs, ys, us, vs, color='black', width=0.005)
+
+
+# secondary plots
+# ax2 = fig.add_subplot(gs[0, 1])
+# ax2.plot(df['time'], df['vel_z'])
+# ax2.axhline(0, color='black', linestyle='--')
+# ax2.set_xlabel('time (s)')
+# ax2.set_ylabel('z-velocity (m/s)')
+
+ax2 = fig.add_subplot(gs[0, 1])
+ax2.plot(df['time'], df['alpha'])
+ax2.axhline(0, color='black', linestyle='--')
+ax2.set_xlabel('time (s)')
+ax2.set_ylabel('AoA (deg)')
+
+ax3 = fig.add_subplot(gs[1, 1])
+ax3.plot(df['time'], df['mach'])
+ax3.axhline(0, color='black', linestyle='--')
+ax3.set_xlabel('time (s)')
+ax3.set_ylabel('Mach')
+
+
+plt.tight_layout()
+plt.subplots_adjust(wspace=0.2)
+plt.show()
+
+print(f'Apogee: {df['pos_y'].max()} m')
+print(f'Max speed: {df['v'].max()} m/s')
+print(f'Max mach: {df['mach'].max()} M')

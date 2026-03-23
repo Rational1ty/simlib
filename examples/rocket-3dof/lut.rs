@@ -87,17 +87,17 @@ impl Lut2 {
 		Self {
 			dim: (ts.len(), us.len()),
 			ts: ts.to_vec(),
-			us: ts.to_vec(),
-			data: ts.to_vec(),
+			us: us.to_vec(),
+			data: data.to_vec(),
 		}
 	}
 
 	pub fn get(&self, t: f64, u: f64) -> f64 {
 		if t < self.ts[0] || t > self.ts[self.ts.len() - 1] {
-			panic!("requested value {t} is outside Lut2 range");
+			panic!("requested t-value {t} is outside Lut2 range");
 		}
 		if u < self.us[0] || u > self.us[self.us.len() - 1] {
-			panic!("requested value {u} is outside Lut2 range");
+			panic!("requested u-value {u} is outside Lut2 range");
 		}
 
 		// find indicies along t and u axes
@@ -117,6 +117,12 @@ impl Lut2 {
 		let v1 = v01 + alpha_t * (v11 - v01);
 
 		v0 + alpha_u * (v1 - v0)
+	}
+
+	pub fn saturating_get(&self, t: f64, u: f64) -> f64 {
+		let t_sat = t.clamp(self.ts[0], self.ts[self.ts.len() - 1]);
+		let u_sat = u.clamp(self.us[0], self.us[self.us.len() - 1]);
+		self.get(t_sat, u_sat)
 	}
 
 	fn get_axis_indicies(value: f64, axis: &[f64]) -> (usize, usize, f64) {

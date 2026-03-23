@@ -5,7 +5,7 @@ use simlib::{Executor, Phase, Recorder};
 
 use crate::{
 	aero::BodyAeroCoefficients,
-	lut::Lut1,
+	lut::Lut2,
 	motor::Motor,
 	rocket::{FlightPhase, Rail, Rocket, velocity_to_mach},
 };
@@ -17,33 +17,7 @@ mod motor;
 mod rocket;
 
 fn main() {
-	let motor = Motor::from_eng_file("I280.eng").unwrap();
-	let rail = Rail {
-		angle: 85_f64.to_radians(),
-		length: 3.084, // 10 feet
-	};
-
-	// this is modeled roughly after an IRIS 4 rocket with an H/I motor
-	let sim = Rocket {
-		coeffs: BodyAeroCoefficients {
-			cp: 1.625,
-			cg: 1.466,
-			surface_area: 8.13e-3,
-			ca_mach: Lut1::new(
-				&[0.0, 0.025, 0.12, 0.4, 1.0, 1.1, 1.27, 3.0],
-				&[1.95, 0.85, 0.73, 0.75, 0.91, 0.96, 0.84, 0.62],
-			),
-			cn_alpha_mach: Lut1::new(
-				&[0.0, 0.4, 0.6, 1.0, 1.2, 1.32, 1.4, 2.0, 3.0],
-				&[21.0, 21.27, 21.66, 23.12, 23.84, 23.48, 22.72, 14.22, 9.5],
-			),
-		},
-		inertia: 0.62,
-		mass: 2.0,
-		motor,
-		rail,
-		..Default::default()
-	};
+	let sim = get_iris4_config();
 
 	let dt = 0.01;
 	let end_time = 30.0;
@@ -127,8 +101,57 @@ fn main() {
 	recorder.track("angular_vel", |sim| sim.angular_vel);
 	recorder.track("angular_accel", |sim| sim.angular_accel);
 	recorder.track("mach", |sim| velocity_to_mach(sim.velocity.length(), sim.position.y));
+	recorder.track("alpha", |sim| {
+		let lcef_to_body_dcm = glam::DMat2::from_angle(sim.orientation).transpose();
+		let vel_body = lcef_to_body_dcm * sim.velocity;
+		-f64::atan2(vel_body.y, vel_body.x).to_degrees()
+	});
 
 	exec.set_recorder(recorder);
 
 	exec.run(sim);
+}
+
+fn get_iris4_config() -> Rocket {
+	let iris_config = BodyAeroCoefficients {
+		cp: 1.625,
+		cg: 1.466,
+		surface_area: 8.13e-3,
+		..Default::default()
+	};
+
+	let iris_coeffs = read_hdf5("iris4.hdf5", iris_config).unwrap();
+
+	let rail = Rail {
+		angle: 85_f64.to_radians(),
+		length: 3.084, // 10 feet
+	};
+	let motor = Motor::from_eng_file("I280.eng").unwrap();
+
+	Rocket {
+		coeffs: iris_coeffs,
+		mass: 2.0,
+		inertia: 0.61,
+		rail,
+		motor,
+		..Default::default()
+	}
+}
+
+fn read_hdf5(filename: &str, config: BodyAeroCoefficients) -> hdf5::Result<BodyAeroCoefficients> {
+	let file = hdf5::File::open(filename)?;
+
+	let angle: Vec<f64> = file.dataset("alpha")?.read_raw()?;
+	let mach: Vec<f64> = file.dataset("mach")?.read_raw()?;
+	let cx: Vec<f64> = file.dataset("ca/off")?.read_raw()?;
+	let cy: Vec<f64> = file.dataset("cy/off")?.read_raw()?;
+
+	eprintln!("angle = {:?}", angle);
+	eprintln!("mach = {:?} .. {:?}", &mach[0..5], &mach[mach.len() - 5..]);
+
+	Ok(BodyAeroCoefficients {
+		ca_alpha_mach: Lut2::new(&angle, &mach, &cx),
+		cn_alpha_mach: Lut2::new(&angle, &mach, &cy),
+		..config
+	})
 }

@@ -96,9 +96,15 @@ impl Rocket {
 			return DVec3::ZERO;
 		}
 
-		let c_x = self.coeffs.cx_alpha_mach.get(alpha.abs().to_degrees(), mach);
+		let c_x = self
+			.coeffs
+			.cx_alpha_mach
+			.get(alpha.abs().to_degrees(), mach);
 		let c_y = self.coeffs.cy_beta_mach.get(beta.abs().to_degrees(), mach);
-		let c_z = self.coeffs.cz_alpha_mach.get(alpha.abs().to_degrees(), mach);
+		let c_z = self
+			.coeffs
+			.cz_alpha_mach
+			.get(alpha.abs().to_degrees(), mach);
 
 		let force_x = -q_s * c_x;
 		let force_y = -q_s * c_y * beta.signum();

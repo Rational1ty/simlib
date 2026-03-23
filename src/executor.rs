@@ -105,7 +105,7 @@ impl<S: Clone + Default> Executor<S> {
 
 			if let Some(recorder) = &mut self.recorder {
 				recorder.sample(&sim, self.time.t);
-				recorder.write_csv().unwrap();
+				// recorder.write_csv().unwrap();
 			}
 		}
 

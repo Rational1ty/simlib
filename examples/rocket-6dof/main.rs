@@ -138,9 +138,13 @@ fn main() {
 	recorder.track("mach", |sim| velocity_to_mach(sim.velocity.length(), sim.position.z));
 
 	// sim health metrics
-	recorder.track("alpha", |sim| f64::atan2(-sim.velocity.z, sim.velocity.x).to_degrees());
+	recorder.track("alpha", |sim| {
+		let vel_body = sim.orientation.conjugate() * sim.velocity;
+		f64::atan2(-vel_body.z, vel_body.x).to_degrees()
+	});
 	recorder.track("beta", |sim| {
-		f64::atan2(sim.velocity.y, f64::hypot(sim.velocity.x, sim.velocity.z)).to_degrees()
+		let vel_body = sim.orientation.conjugate() * sim.velocity;
+		f64::atan2(vel_body.y, f64::hypot(vel_body.x, vel_body.z)).to_degrees()
 	});
 
 	exec.set_recorder(recorder);
