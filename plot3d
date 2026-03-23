@@ -63,7 +63,7 @@ step = round(0.05 * max_range)
 xs, ys, zs = x[::step], y[::step], z[::step]
 us, vs, ws = dirs[::step].T
 
-scale = round(0.1 * max_range)
+scale = round(0.05 * max_range)
 ax.quiver(xs, ys, zs, us, vs, ws, length=scale, color='black', normalize=True)
 
 
@@ -90,6 +90,7 @@ ax3.plot(df['time'], df['alpha'])
 ax3.axhline(0, color='black', linestyle='--')
 ax3.set_xlabel('time (s)')
 ax3.set_ylabel('AoA (deg)')
+ax3.set_ylim(-30, 30)
 
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.2)

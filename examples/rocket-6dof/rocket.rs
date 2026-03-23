@@ -70,9 +70,9 @@ impl Rocket {
 		let coriolis = omega.cross(i_omega);
 
 		dvec3(
-			(net_moment_body.x - coriolis.x) / inertia.x,
-			(net_moment_body.y - coriolis.y) / inertia.y,
-			(net_moment_body.z - coriolis.z) / inertia.z,
+			-(net_moment_body.x - coriolis.x) / inertia.x,
+			-(net_moment_body.y - coriolis.y) / inertia.y,
+			-(net_moment_body.z - coriolis.z) / inertia.z,
 		)
 	}
 
@@ -88,7 +88,7 @@ impl Rocket {
 		let rho = atmosphere::get_air_density(self.position.z.max(0.0));
 		let q_s = 0.5 * rho * v * v * self.coeffs.surface_area;
 
-		let alpha = f64::atan2(-vel_body.z, vel_body.x);
+		let alpha = f64::atan2(vel_body.z, vel_body.x);
 		let beta = f64::atan2(vel_body.y, f64::hypot(vel_body.x, vel_body.z));
 		let mach = velocity_to_mach(v, self.position.z.max(0.0));
 
@@ -99,12 +99,12 @@ impl Rocket {
 		let c_x = self
 			.coeffs
 			.cx_alpha_mach
-			.get(alpha.abs().to_degrees(), mach);
-		let c_y = self.coeffs.cy_beta_mach.get(beta.abs().to_degrees(), mach);
+			.saturating_get(alpha.abs().to_degrees(), mach);
+		let c_y = self.coeffs.cy_beta_mach.saturating_get(beta.abs().to_degrees(), mach);
 		let c_z = self
 			.coeffs
 			.cz_alpha_mach
-			.get(alpha.abs().to_degrees(), mach);
+			.saturating_get(alpha.abs().to_degrees(), mach);
 
 		let force_x = -q_s * c_x;
 		let force_y = -q_s * c_y * beta.signum();
