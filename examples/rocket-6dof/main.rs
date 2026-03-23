@@ -58,15 +58,20 @@ fn main() {
 	);
 
 	exec.add_job(Phase::Init, |sim, _| {
-		// println!("Starting sim with initial state: {:#?}", sim);
 		sim.orientation = sim.rail.orientation();
 		println!("Starting rocket sim");
 		println!("  motor: {} {}", sim.motor.manufacturer, sim.motor.designation);
 		println!(
-			"  rail: {} m at elev {:.2}°, az {:.2}°",
+			"  rail: {} m at elev {:.1}°, az {:.1}°",
 			sim.rail.length,
 			90.0 - sim.rail.angle.to_degrees(),
 			sim.rail.azimuth.to_degrees(),
+		);
+		println!(
+			"  wind: {:.1} m/s towards {:.1}°, up angle {:.1}°",
+			sim.wind.length(),
+			f64::atan2(sim.wind.y, sim.wind.x).to_degrees(),
+			f64::atan2(sim.wind.z, f64::hypot(sim.wind.x, sim.wind.y)).to_degrees()
 		);
 	});
 
@@ -84,7 +89,7 @@ fn main() {
 			..
 		} = &sim;
 		println!(
-			"t={:.3} | pos=({:.3}, {:.3}, {:.3}) vel=({:.3}, {:.3}, {:.3}) q=({:.4}, {:.4}, {:.4}, {:.4}) w=({:.4}, {:.4}, {:.4})",
+			"t={:.3} | pos=({:.3}, {:.3}, {:.3}) vel=({:.3}, {:.3}, {:.3}) q=({:.3}, {:.3}, {:.3}, {:.3}) ω=({:.3}, {:.3}, {:.3})",
 			time.t,
 			position.x,
 			position.y,
@@ -141,8 +146,6 @@ fn main() {
 	recorder.track("alpha_y", |sim| sim.angular_accel.y);
 	recorder.track("alpha_z", |sim| sim.angular_accel.z);
 	recorder.track("mach", |sim| velocity_to_mach(sim.velocity.length(), sim.position.z));
-
-	// sim health metrics
 	recorder.track("alpha", |sim| {
 		let vel_body = sim.orientation.conjugate() * sim.velocity;
 		f64::atan2(-vel_body.z, vel_body.x).to_degrees()
@@ -200,7 +203,6 @@ fn get_telemachus_config() -> Rocket {
 		azimuth: 30_f64.to_radians(),
 		length: 5.0,
 	};
-
 	let motor = Motor::from_eng_file("M3464.eng").unwrap();
 
 	Rocket {
@@ -222,9 +224,6 @@ fn read_hdf5(filename: &str, config: BodyAeroCoefficients) -> hdf5::Result<BodyA
 	let cx: Vec<f64> = file.dataset("ca/off")?.read_raw()?;
 	let cy: Vec<f64> = file.dataset("cy/off")?.read_raw()?;
 	let cz: Vec<f64> = file.dataset("cn/off")?.read_raw()?;
-
-	eprintln!("angle = {:?}", angle);
-	eprintln!("mach = {:?} .. {:?}", &mach[0..5], &mach[mach.len() - 5..]);
 
 	Ok(BodyAeroCoefficients {
 		cx_alpha_mach: Lut2::new(&angle, &mach, &cx),

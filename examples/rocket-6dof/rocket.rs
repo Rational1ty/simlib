@@ -1,4 +1,4 @@
-use glam::{DQuat, DVec3, EulerRot, dvec3};
+use glam::{DQuat, DVec3, DVec4, EulerRot, dvec3};
 use simlib::SimTime;
 
 use crate::{aero::BodyAeroCoefficients, atmosphere, motor::Motor};
@@ -56,12 +56,12 @@ impl Rocket {
 	/// where
 	/// - `q` is the rocket's orientation quaternion
 	/// - `ω_q` is the rocket's angular rate as a quaternion `[ω, 0]`
-	fn quaternion_derivative(body_to_enu: DQuat, omega_body: DVec3) -> DQuat {
+	fn quaternion_derivative(body_to_enu: DQuat, omega_body: DVec3) -> DVec4 {
 		let qv = body_to_enu.xyz();
 		let qv_dot = 0.5 * ((body_to_enu.w * omega_body) + qv.cross(omega_body));
 		let qw_dot = -0.5 * qv.dot(omega_body);
 
-		DQuat::from_xyzw(qv_dot.x, qv_dot.y, qv_dot.z, qw_dot)
+		DVec4::new(qv_dot.x, qv_dot.y, qv_dot.z, qw_dot)
 	}
 
 	/// Solves for `ω_dot` in the equation `M = Iω_dot + ω ⨉ (Iω)`.
@@ -71,11 +71,7 @@ impl Rocket {
 		let i_omega = self.inertia * self.angular_vel;
 		let coriolis = omega.cross(i_omega);
 
-		dvec3(
-			-(net_moment_body.x - coriolis.x) / inertia.x,
-			-(net_moment_body.y - coriolis.y) / inertia.y,
-			-(net_moment_body.z - coriolis.z) / inertia.z,
-		)
+		-(net_moment_body - coriolis) / inertia
 	}
 
 	fn get_aero_force_body(&self) -> DVec3 {
@@ -86,7 +82,8 @@ impl Rocket {
 		let vel_air_body = enu_to_body * vel_air_enu;
 		let v = vel_air_body.length();
 
-		if v < 0.1 {
+		// no velocity => no aero forces
+		if v < 0.01 {
 			return DVec3::ZERO;
 		}
 
@@ -96,10 +93,6 @@ impl Rocket {
 		let alpha = f64::atan2(vel_air_body.z, vel_air_body.x);
 		let beta = f64::atan2(vel_air_body.y, f64::hypot(vel_air_body.x, vel_air_body.z));
 		let mach = velocity_to_mach(v, self.position.z.max(0.0));
-
-		if mach < 0.01 {
-			return DVec3::ZERO;
-		}
 
 		let c_x = self
 			.coeffs
@@ -114,11 +107,7 @@ impl Rocket {
 			.cz_alpha_mach
 			.saturating_get(alpha.abs().to_degrees(), mach);
 
-		let force_x = -q_s * c_x;
-		let force_y = -q_s * c_y * beta.signum();
-		let force_z = -q_s * c_z * alpha.signum();
-
-		dvec3(force_x, force_y, force_z)
+		-q_s * dvec3(c_x, c_y * beta.signum(), c_z * alpha.signum())
 	}
 
 	pub fn derivative(&mut self, time: &SimTime) -> Vec<f64> {
@@ -137,12 +126,6 @@ impl Rocket {
 
 		let aero_force_body = self.get_aero_force_body();
 		let aero_force_enu = body_to_enu * aero_force_body;
-
-		let moment_arm = dvec3(self.coeffs.cp - self.coeffs.cg, 0.0, 0.0);
-		let aero_moment_body = moment_arm.cross(aero_force_body);
-		let net_angular_accel_body = self.angular_accel_body(aero_moment_body);
-
-		let quat_dot = Self::quaternion_derivative(body_to_enu, self.angular_vel);
 
 		let mass = self.mass + self.motor.total_weight_kg;
 		let net_acceleration_enu = ((thrust_enu + aero_force_enu) / mass) + gravity_accel;
@@ -176,6 +159,12 @@ impl Rocket {
 
 			self.flight_phase = FlightPhase::Boost;
 		}
+
+		let moment_arm = dvec3(self.coeffs.cp - self.coeffs.cg, 0.0, 0.0);
+		let aero_moment_body = moment_arm.cross(aero_force_body);
+		let net_angular_accel_body = self.angular_accel_body(aero_moment_body);
+
+		let quat_dot = Self::quaternion_derivative(body_to_enu, self.angular_vel);
 
 		self.acceleration = net_acceleration_enu;
 		self.angular_accel = net_angular_accel_body;
