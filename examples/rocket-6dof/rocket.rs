@@ -105,7 +105,10 @@ impl Rocket {
 			.coeffs
 			.cx_alpha_mach
 			.saturating_get(alpha.abs().to_degrees(), mach);
-		let c_y = self.coeffs.cy_beta_mach.saturating_get(beta.abs().to_degrees(), mach);
+		let c_y = self
+			.coeffs
+			.cy_beta_mach
+			.saturating_get(beta.abs().to_degrees(), mach);
 		let c_z = self
 			.coeffs
 			.cz_alpha_mach
