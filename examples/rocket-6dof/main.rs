@@ -21,7 +21,7 @@ fn main() {
 	let sim = get_telemachus_config();
 
 	let dt = 0.01;
-	let end_time = 70.0;
+	let end_time = 60.0;
 	let mut exec = Executor::<Rocket>::new(dt, end_time);
 
 	exec.set_integrator(
@@ -61,7 +61,7 @@ fn main() {
 		// println!("Starting sim with initial state: {:#?}", sim);
 		sim.orientation = sim.rail.orientation();
 		println!("Starting rocket sim");
-		println!("  motor: {}", sim.motor.designation);
+		println!("  motor: {} {}", sim.motor.manufacturer, sim.motor.designation);
 		println!(
 			"  rail: {} m at elev {:.2}°, az {:.2}°",
 			sim.rail.length,
@@ -201,7 +201,7 @@ fn get_telemachus_config() -> Rocket {
 		length: 5.0,
 	};
 
-	let motor = Motor::from_eng_file("O3400.eng").unwrap();
+	let motor = Motor::from_eng_file("M3464.eng").unwrap();
 
 	Rocket {
 		coeffs: tele_coeffs,

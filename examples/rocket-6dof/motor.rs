@@ -7,6 +7,7 @@ use crate::lut::Lut1;
 #[derive(Clone, Debug, Default)]
 pub struct Motor {
 	pub designation: String,
+	pub manufacturer: String,
 	pub prop_weight_kg: f64,
 	pub total_weight_kg: f64,
 	pub burn_time_end: f64,
@@ -32,6 +33,7 @@ impl Motor {
 		let first_line: Vec<&str> = lines.first().unwrap().split_ascii_whitespace().collect();
 
 		let designation = first_line[0].to_string();
+		let manufacturer = first_line[6].to_string();
 		let prop_weight_kg = first_line[4]
 			.parse::<f64>()
 			.expect("should be a valid float");
@@ -64,6 +66,7 @@ impl Motor {
 
 		Self {
 			designation,
+			manufacturer,
 			prop_weight_kg,
 			total_weight_kg,
 			burn_time_end,
@@ -109,6 +112,7 @@ mod tests {
 		println!("{:?}", motor);
 
 		assert_eq!(motor.designation, "F32");
+		assert_eq!(motor.manufacturer, "RV");
 		assert_eq!(motor.prop_weight_kg, 0.0377);
 		assert_eq!(motor.total_weight_kg, 0.0695);
 		assert_eq!(motor.burn_time_end, 2.72);
