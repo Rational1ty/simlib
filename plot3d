@@ -68,11 +68,17 @@ ax.quiver(xs, ys, zs, us, vs, ws, length=scale, color='black', normalize=True)
 
 
 # secondary plots
+# ax2 = fig.add_subplot(gs[0, 1])
+# ax2.plot(df['time'], df['vel_z'])
+# ax2.axhline(0, color='black', linestyle='--')
+# ax2.set_xlabel('time (s)')
+# ax2.set_ylabel('z-velocity (m/s)')
+
 ax2 = fig.add_subplot(gs[0, 1])
-ax2.plot(df['time'], df['vel_z'])
+ax2.plot(df['time'], df['alpha_y'])
 ax2.axhline(0, color='black', linestyle='--')
 ax2.set_xlabel('time (s)')
-ax2.set_ylabel('z-velocity (m/s)')
+ax2.set_ylabel('alpha_y (rad/s^2)')
 
 ax3 = fig.add_subplot(gs[1, 1])
 ax3.plot(df['time'], df['mach'])

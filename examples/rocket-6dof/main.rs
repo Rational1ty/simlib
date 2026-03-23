@@ -6,7 +6,7 @@ use simlib::{Executor, Phase, Recorder};
 
 use crate::{
 	aero::BodyAeroCoefficients,
-	lut::{Lut1, Lut2},
+	lut::Lut2,
 	motor::Motor,
 	rocket::{FlightPhase, Rail, Rocket, velocity_to_mach},
 };
@@ -18,7 +18,7 @@ mod motor;
 mod rocket;
 
 fn main() {
-	let sim = get_telemachus_config();
+	let sim = get_iris4_config();
 
 	let dt = 0.01;
 	let end_time = 30.0;
@@ -149,52 +149,27 @@ fn main() {
 }
 
 fn get_iris4_config() -> Rocket {
-	let aoa_axis = [0.0, 5_f64.to_radians(), 10_f64.to_radians()];
-	let mach_axis = [0.0, 0.025, 0.12, 0.4, 0.6, 1.0, 1.1, 1.27, 2.0, 3.0];
-	let ca_mach = Lut1::new(
-		&[0.0, 0.025, 0.12, 0.4, 1.0, 1.1, 1.27, 3.0],
-		&[1.95, 0.85, 0.73, 0.75, 0.91, 0.96, 0.84, 0.62],
-	);
-	let cn_alpha_mach = Lut1::new(
-		&[0.0, 0.4, 0.6, 1.0, 1.2, 1.32, 1.4, 2.0, 3.0],
-		&[21.0, 21.27, 21.66, 23.12, 23.84, 23.48, 22.72, 14.22, 9.5],
-	);
+	let iris_config = BodyAeroCoefficients {
+		cp: 1.625,
+		cg: 1.466,
+		surface_area: 8.13e-3,
+		..Default::default()
+	};
 
-	let mut c_x_data = Vec::with_capacity(aoa_axis.len() * mach_axis.len());
-	let mut c_y_data = Vec::with_capacity(aoa_axis.len() * mach_axis.len());
-	let mut c_z_data = Vec::with_capacity(aoa_axis.len() * mach_axis.len());
-	let aoa_soft_limit = 8_f64.to_radians();
-	for &aoa in &aoa_axis {
-		for &mach in &mach_axis {
-			let ca = ca_mach.saturating_get(mach);
-			let cn_linear = cn_alpha_mach.saturating_get(mach) * aoa;
-			let cn = cn_linear / (1.0 + (aoa / aoa_soft_limit).powi(2));
-			c_x_data.push(ca);
-			c_y_data.push(cn);
-			c_z_data.push(cn);
-		}
-	}
+	let iris_coeffs = read_hdf5("iris4.hdf5", iris_config).unwrap();
 
-	let motor = Motor::from_eng_file("I280.eng").unwrap();
 	let rail = Rail {
 		angle: 85_f64.to_radians(),
 		length: 3.084, // 10 feet
 	};
+	let motor = Motor::from_eng_file("I280.eng").unwrap();
 
-	// this is modeled roughly after an IRIS 4 rocket with an H/I motor
 	Rocket {
-		coeffs: BodyAeroCoefficients {
-			cp: 1.625,
-			cg: 1.466,
-			surface_area: 8.13e-3,
-			cx_alpha_mach: Lut2::new(&aoa_axis, &mach_axis, &c_x_data),
-			cy_beta_mach: Lut2::new(&aoa_axis, &mach_axis, &c_y_data),
-			cz_alpha_mach: Lut2::new(&aoa_axis, &mach_axis, &c_z_data),
-		},
-		inertia: dvec3(0.62, 0.62, 0.01),
+		coeffs: iris_coeffs,
 		mass: 2.0,
-		motor,
+		inertia: dvec3(1.34e-2, 0.61, 0.61),
 		rail,
+		motor,
 		..Default::default()
 	}
 }
