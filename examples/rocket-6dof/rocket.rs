@@ -1,21 +1,22 @@
-use glam::{DQuat, DVec3, dvec3};
+use glam::{DQuat, DVec3, EulerRot, dvec3};
 use simlib::SimTime;
 
 use crate::{aero::BodyAeroCoefficients, atmosphere, motor::Motor};
 
 #[derive(Clone, Debug, Default)]
 pub struct Rail {
-	pub angle: f64,  // rad
-	pub length: f64, // m
+	pub angle: f64,   // rad elevation above local horizontal
+	pub azimuth: f64, // rad yaw in ENU, 0=east, +CCW toward north
+	pub length: f64,  // m
 }
 
 impl Rail {
 	pub fn direction(&self) -> DVec3 {
-		dvec3(self.angle.cos(), 0.0, self.angle.sin())
+		self.orientation() * DVec3::X
 	}
 
-	pub fn initial_orientation(&self) -> DQuat {
-		DQuat::from_rotation_y(-self.angle)
+	pub fn orientation(&self) -> DQuat {
+		DQuat::from_euler(EulerRot::ZYX, self.azimuth, -self.angle, 0.0)
 	}
 }
 

@@ -59,10 +59,15 @@ fn main() {
 
 	exec.add_job(Phase::Init, |sim, _| {
 		// println!("Starting sim with initial state: {:#?}", sim);
-		sim.orientation = sim.rail.initial_orientation();
+		sim.orientation = sim.rail.orientation();
 		println!("Starting rocket sim");
 		println!("  motor: {}", sim.motor.designation);
-		println!("  rail: {} m at {:.2}°", sim.rail.length, 90.0 - sim.rail.angle.to_degrees());
+		println!(
+			"  rail: {} m at elev {:.2}°, az {:.2}°",
+			sim.rail.length,
+			90.0 - sim.rail.angle.to_degrees(),
+			sim.rail.azimuth.to_degrees(),
+		);
 	});
 
 	exec.add_job(Phase::PreIntegrate, |sim, time| {
@@ -164,6 +169,7 @@ fn get_iris4_config() -> Rocket {
 
 	let rail = Rail {
 		angle: 85_f64.to_radians(),
+		azimuth: 30_f64.to_radians(),
 		length: 3.084, // 10 feet
 	};
 	let motor = Motor::from_eng_file("I280.eng").unwrap();
@@ -190,6 +196,7 @@ fn get_telemachus_config() -> Rocket {
 
 	let rail = Rail {
 		angle: 85_f64.to_radians(),
+		azimuth: 30_f64.to_radians(),
 		length: 5.0,
 	};
 
