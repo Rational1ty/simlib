@@ -59,7 +59,7 @@ rot = Rotation.from_quat(q)
 body_vec = np.array([1, 0, 0])
 dirs = rot.apply(body_vec) # Rotate into world frame - shape (N,3)
 
-step = round(0.2 * max_range)
+step = round(0.05 * max_range)
 xs, ys, zs = x[::step], y[::step], z[::step]
 us, vs, ws = dirs[::step].T
 
@@ -80,12 +80,16 @@ ax2.axhline(0, color='black', linestyle='--')
 ax2.set_xlabel('time (s)')
 ax2.set_ylabel('alpha_y (rad/s^2)')
 
+# ax3 = fig.add_subplot(gs[1, 1])
+# ax3.plot(df['time'], df['mach'])
+# ax3.axhline(0, color='black', linestyle='--')
+# ax3.set_xlabel('time (s)')
+# ax3.set_ylabel('Mach')
 ax3 = fig.add_subplot(gs[1, 1])
-ax3.plot(df['time'], df['mach'])
+ax3.plot(df['time'], df['alpha'])
 ax3.axhline(0, color='black', linestyle='--')
 ax3.set_xlabel('time (s)')
-ax3.set_ylabel('Mach')
-
+ax3.set_ylabel('AoA (deg)')
 
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.2)

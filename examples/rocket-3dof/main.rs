@@ -137,6 +137,32 @@ fn get_iris4_config() -> Rocket {
 		..Default::default()
 	}
 }
+fn get_telemachus_config() -> Rocket {
+	let tele_coeffs = BodyAeroCoefficients {
+		cp: 2.425,
+		cg: 1.851,
+		surface_area: 18.258e-3,
+		..Default::default()
+	};
+
+	let tele_coeffs = read_hdf5("tele.hdf5", tele_coeffs).unwrap();
+
+	let rail = Rail {
+		angle: 85_f64.to_radians(),
+		length: 5.0,
+	};
+
+	let motor = Motor::from_eng_file("O3400.eng").unwrap();
+
+	Rocket {
+		coeffs: tele_coeffs,
+		mass: 18.991,
+		inertia: 18.4,
+		rail,
+		motor,
+		..Default::default()
+	}
+}
 
 fn read_hdf5(filename: &str, config: BodyAeroCoefficients) -> hdf5::Result<BodyAeroCoefficients> {
 	let file = hdf5::File::open(filename)?;

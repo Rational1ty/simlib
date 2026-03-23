@@ -104,14 +104,13 @@ impl<S: Clone + Default> Executor<S> {
 			self.last_state = sim.clone();
 
 			if let Some(recorder) = &mut self.recorder {
-				recorder.sample(&sim, self.time.t);
-				// recorder.write_csv().unwrap();
+				recorder.sample_and_write(&sim, self.time.t);
 			}
 		}
 
 		self.run_phase(Phase::Shutdown, &mut sim);
 
-		if let Some(recorder) = &self.recorder {
+		if let Some(recorder) = &mut self.recorder {
 			recorder.write_csv().unwrap();
 		}
 	}
