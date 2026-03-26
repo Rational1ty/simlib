@@ -101,10 +101,11 @@ impl<S: Clone + Default> Executor<S> {
 			self.run_phase(Phase::PostIntegrate, &mut sim);
 
 			// checkpoint
-			self.last_state = sim.clone();
+			// self.last_state = sim.clone();
 
 			if let Some(recorder) = &mut self.recorder {
-				recorder.sample_and_write(&sim, self.time.t);
+				// recorder.sample_and_write(&sim, self.time.t);
+				recorder.sample(&sim, self.time.t);
 			}
 		}
 

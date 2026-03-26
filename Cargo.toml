@@ -9,3 +9,10 @@ edition = "2024"
 dedent = "0.1.1"
 glam = "0.32.0"
 hdf5 = { version = "0.12.3", package = "hdf5-metno" }
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+panic = "abort"
+codegen-units = 1
