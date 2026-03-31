@@ -1,3 +1,8 @@
+#![expect(
+	clippy::type_complexity,
+	reason = "The types this lint catches aren't complex enough to warrant their own aliases."
+)]
+
 mod dynamic_event;
 mod executor;
 mod integrator;

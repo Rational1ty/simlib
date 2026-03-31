@@ -171,7 +171,7 @@ impl<S> Executor<S> {
 	///
 	/// - multiple events happen during the time step, and
 	/// - the initial tgo estimates are in the wrong order (i.e., event 1 happens before event 2, but the first
-	/// `tgo` for event 1 is after the first `tgo` for event 2).
+	///   `tgo` for event 1 is after the first `tgo` for event 2).
 	///
 	/// But this is very unlikely to ever happen, so we don't account for it.
 	fn run_dynamic_events(&mut self, sim: &mut S, mut t_to: f64) {
@@ -184,7 +184,7 @@ impl<S> Executor<S> {
 		let mut events_fired: Vec<_> = self
 			.dyn_events
 			.iter_mut()
-			.filter_map(|ev| ev.time_to_go(&sim, t_to).map(|tgo| (ev, tgo)))
+			.filter_map(|ev| ev.time_to_go(sim, t_to).map(|tgo| (ev, tgo)))
 			.collect();
 		events_fired.sort_by(|e1, e2| f64::total_cmp(&e1.1, &e2.1));
 
@@ -203,7 +203,7 @@ impl<S> Executor<S> {
 					event.reset();
 
 					if let Some(recorder) = &mut self.recorder {
-						recorder.sample(&sim, t_to);
+						recorder.sample(sim, t_to);
 					}
 
 					t_to = original_t_to;
@@ -226,7 +226,7 @@ impl<S> Executor<S> {
 					},
 				);
 
-				tgo = event.time_to_go(&sim, t_to).unwrap();
+				tgo = event.time_to_go(sim, t_to).unwrap();
 			}
 		}
 	}
