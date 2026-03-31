@@ -14,16 +14,15 @@ Critical path:
 - [x] Job scheduling
 - [x] State integration (RK4 and other integrators)
 - [x] Variable recording
-- [x] Last step checkpointing
-- [ ] Dynamic events (regula falsi method)
-- [ ] Monte carlo (with `rayon` crate)
+- [x] Dynamic events
+- [ ] Monte carlo
 
 Other features:
-- [ ] Run jobs at different rates
+- [ ] Scheduled jobs (time-based, not based on sim phase)
 - [ ] Multiple simobject instances like in Trick
 - [ ] Input files / scripting
 - [ ] Variable server
-- [ ] Arbitrary checkpointing (any point in the sim)
+- [ ] Checkpointing
 - [ ] Real-time simulation
 - [ ] Freeze/unfreeze
 - [ ] Proc macro for variable recording
@@ -40,10 +39,12 @@ struct RocketSimulation {
 	velocity: Vec3,
 	acceleration: Vec3,
 	orientation: Quat,
-	fake_sensor: f32,
+	fake_sensor: f64,
 }
 
-let exec = Executor::<RocketSimulation>::new();
+let dt = 0.1;
+let end_time = 20.0;
+let exec = Executor::<RocketSimulation>::new(dt, end_time);
 ```
 
 The simulation is defined by calling methods and setting up callbacks on the executor:
@@ -61,10 +62,10 @@ Main sim loop:
 
 ```
 run init jobs
-save checkpoint
 
 while t < end_time:
 	run pre-integration jobs
+	record variables
 
 	run integration loop:
 		load state vector
@@ -79,13 +80,11 @@ while t < end_time:
 		run event action
 		record variables
 
-	run post-integration jobs
-
-	save checkpoint
-	record variables
-
 	step += 1
 	t = step * dt
+
+	run post-integration jobs
+	record variables
 
 run shutdown jobs
 save recorded variables to file
@@ -94,7 +93,6 @@ save recorded variables to file
 
 ## Need to figure out
 
-- How to handle multiple dynamic events firing within the same time step
 - If the current design scales well to larger and more complex sims
 - How to make sure integrator and derivative function always use the same number of state variables
 - Best way to set up integration/derivative jobs
