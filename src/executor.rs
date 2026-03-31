@@ -27,12 +27,20 @@ pub enum Phase {
 
 type Job<S> = Box<dyn FnMut(&mut S, &SimTime)>;
 
+struct ScheduledJob<S> {
+	interval: Duration,
+	next_fire: f64,
+	fire_count: u64,
+	job: Job<S>,
+}
+
 // TODO: add builder to validate configuration (e.g. dyn events with no integrator)
 // before starting sim
 pub struct Executor<S> {
 	time: SimTime,
 	end_time: f64,
 	jobs: HashMap<Phase, Vec<Job<S>>>,
+	scheduled_jobs: Vec<ScheduledJob<S>>,
 	dyn_events: Vec<RegulaFalsi<S>>,
 	integrator: Option<Integrator<S>>,
 	recorder: Option<Recorder<S>>,
@@ -49,6 +57,7 @@ impl<S> Executor<S> {
 			},
 			end_time,
 			jobs: HashMap::new(),
+			scheduled_jobs: Vec::new(),
 			dyn_events: Vec::new(),
 			integrator: None,
 			recorder: None,
@@ -96,6 +105,18 @@ impl<S> Executor<S> {
 		self.jobs.entry(phase).or_default().push(Box::new(job));
 	}
 
+	pub fn add_scheduled_job<F>(&mut self, interval: Duration, job: F)
+	where
+		F: FnMut(&mut S, &SimTime) + 'static,
+	{
+		self.scheduled_jobs.push(ScheduledJob {
+			interval,
+			next_fire: interval.as_secs_f64(),
+			fire_count: 0,
+			job: Box::new(job),
+		});
+	}
+
 	pub fn run(&mut self, mut sim: S) {
 		let realtime_start = Instant::now();
 		self.run_phase(Phase::Init, &mut sim);
@@ -135,6 +156,8 @@ impl<S> Executor<S> {
 
 			self.time.step += 1;
 			self.time.t = self.time.dt * self.time.step as f64;
+
+			Self::run_scheduled_jobs(&mut self.scheduled_jobs, &mut sim, self.time.t);
 
 			self.run_phase(Phase::PostIntegrate, &mut sim);
 
@@ -193,6 +216,11 @@ impl<S> Executor<S> {
 		for (event, mut tgo) in events_fired {
 			loop {
 				if tgo == 0.0 {
+					// can't be a normal method because bck complains about overlapping borrows
+					// TODO: fix edge case when dyn event and scheduled job happen at the same time
+					//       (dyn event should run first)
+					Self::run_scheduled_jobs(&mut self.scheduled_jobs, sim, t_to);
+
 					event.apply(
 						sim,
 						&SimTime {
@@ -227,6 +255,27 @@ impl<S> Executor<S> {
 				);
 
 				tgo = event.time_to_go(sim, t_to).unwrap();
+			}
+		}
+	}
+
+	fn run_scheduled_jobs(scheduled_jobs: &mut Vec<ScheduledJob<S>>, sim: &mut S, curr_time: f64) {
+		for sj in scheduled_jobs {
+			while sj.next_fire <= curr_time {
+				// TODO: the dt/step are fake but I'm planning to refactor anyways
+				let sim_time = SimTime {
+					t: sj.next_fire,
+					dt: 0.0,
+					step: 0,
+				};
+				(sj.job)(sim, &sim_time);
+
+				sj.fire_count += 1;
+
+				// This will overflow sooner because of the cast to u32,
+				// but it's unlikely to be a problem.
+				let dur_since_start = sj.interval * (sj.fire_count + 1) as u32;
+				sj.next_fire = dur_since_start.as_secs_f64();
 			}
 		}
 	}

@@ -18,7 +18,7 @@ Critical path:
 - [ ] Monte carlo
 
 Other features:
-- [ ] Scheduled jobs (time-based, not based on sim phase)
+- [x] Scheduled jobs (time-based, not based on sim phase)
 - [ ] Multiple simobject instances like in Trick
 - [ ] Input files / scripting
 - [ ] Variable server
