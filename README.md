@@ -23,7 +23,7 @@ Other features:
 - [ ] Input files / scripting
 - [ ] Variable server
 - [ ] Checkpointing
-- [ ] Real-time simulation
+- [x] Real-time simulation
 - [ ] Freeze/unfreeze
 - [ ] Proc macro for variable recording
 - [ ] Multi-rate integration

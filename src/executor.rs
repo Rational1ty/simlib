@@ -1,4 +1,8 @@
-use std::collections::HashMap;
+use std::{
+	collections::HashMap,
+	thread,
+	time::{Duration, Instant},
+};
 
 use crate::{
 	dynamic_event::{CrossingMode, DynamicEvent, RegulaFalsi},
@@ -32,6 +36,7 @@ pub struct Executor<S> {
 	dyn_events: Vec<RegulaFalsi<S>>,
 	integrator: Option<Integrator<S>>,
 	recorder: Option<Recorder<S>>,
+	realtime: bool,
 }
 
 impl<S> Executor<S> {
@@ -47,6 +52,14 @@ impl<S> Executor<S> {
 			dyn_events: Vec::new(),
 			integrator: None,
 			recorder: None,
+			realtime: false,
+		}
+	}
+
+	pub fn new_realtime(dt: f64, end_time: f64) -> Self {
+		Self {
+			realtime: true,
+			..Self::new(dt, end_time)
 		}
 	}
 
@@ -84,6 +97,7 @@ impl<S> Executor<S> {
 	}
 
 	pub fn run(&mut self, mut sim: S) {
+		let realtime_start = Instant::now();
 		self.run_phase(Phase::Init, &mut sim);
 
 		if let Some(recorder) = &mut self.recorder {
@@ -126,6 +140,11 @@ impl<S> Executor<S> {
 
 			if let Some(recorder) = &mut self.recorder {
 				recorder.sample(&sim, self.time.t);
+			}
+
+			if self.realtime {
+				let deadline = realtime_start + Duration::from_secs_f64(self.time.t);
+				sleep_until(deadline);
 			}
 		}
 
@@ -210,5 +229,14 @@ impl<S> Executor<S> {
 				tgo = event.time_to_go(&sim, t_to).unwrap();
 			}
 		}
+	}
+}
+
+/// Puts the current thread to sleep until the specified deadline.
+fn sleep_until(deadline: Instant) {
+	let now = Instant::now();
+
+	if let Some(delay) = deadline.checked_duration_since(now) {
+		thread::sleep(delay);
 	}
 }
