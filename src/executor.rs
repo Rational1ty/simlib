@@ -86,6 +86,10 @@ impl<S> Executor<S> {
 	pub fn run(&mut self, mut sim: S) {
 		self.run_phase(Phase::Init, &mut sim);
 
+		if let Some(recorder) = &mut self.recorder {
+			recorder.sample(&sim, self.time.t);
+		}
+
 		while self.time.t < self.end_time {
 			self.run_phase(Phase::PreIntegrate, &mut sim);
 			// TODO: update dynamic events here to avoid having lower bound undefined at start?
