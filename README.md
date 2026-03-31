@@ -65,16 +65,22 @@ save checkpoint
 
 while t < end_time:
 	run pre-integration jobs
-	run integration loop
+
+	run integration loop:
+		load state vector
+		load state derivatives
+		integrate
+		unload state vector
+
+	run dynamic events:
+		while tgo != 0:
+			integrate with dt=tgo (might go backwards!)
+			re-evaluate event
+		run event action
+		record variables
+
 	run post-integration jobs
 
-	for each dynamic_event job:
-		run error function
-		if value changed sign:
-			rewind to previous time step
-			integrate to t_event
-			run event job
-	
 	save checkpoint
 	record variables
 

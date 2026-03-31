@@ -8,6 +8,3 @@ edition = "2024"
 [dev-dependencies]
 dedent = "0.1.1"
 glam = "0.32.0"
-
-[lints.clippy]
-needless_return = "allow"

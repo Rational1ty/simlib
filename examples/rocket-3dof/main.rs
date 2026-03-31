@@ -1,7 +1,7 @@
 // TODO: remove this once sim is finished
 #![allow(dead_code)]
 
-use simlib::{Executor, Phase, Recorder};
+use simlib::{CrossingMode, Executor, Phase, Recorder};
 
 use crate::{
 	aero::BodyAeroCoefficients,
@@ -68,6 +68,14 @@ fn main() {
 			sim.velocity.y = s[3];
 			sim.orientation = s[4];
 			sim.angular_vel = s[5];
+		},
+	);
+
+	exec.add_dynamic_event(
+		|sim| sim.velocity.y,
+		CrossingMode::Decreasing,
+		|sim, time| {
+			println!("[APOGEE] t={} alt={}", time.t, sim.position.y);
 		},
 	);
 
