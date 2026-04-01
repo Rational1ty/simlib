@@ -59,10 +59,6 @@ impl<S> DynamicEvent<S> for RegulaFalsi<S> {
 		let t = time;
 		let f = (self.error_fn)(sim);
 
-		if f.abs() < self.tol {
-			return Some(0.0);
-		}
-
 		let Some((t_lo, f_lo)) = self.lower_bound else {
 			self.lower_bound = Some((t, f));
 			return None;
@@ -90,18 +86,31 @@ impl<S> DynamicEvent<S> for RegulaFalsi<S> {
 			return Some(c - t);
 		}
 
+		if f.abs() < self.tol {
+			return Some(0.0);
+		}
+
 		// If we get here, then we are in the refinement phase.
 
 		if self.iterations >= 50 {
 			return Some(0.0);
 		}
-		self.iterations += 1;
+
+		// If the endpoint hasn't moved (no refinement) then this doesn't count as an iteration
+		// and we just return the same tgo as last time.
+		let (t_hi, f_hi) = self.upper_bound.unwrap();
+		if t == t_lo || t == t_hi {
+			let c = ((t_lo * f_hi) - (t_hi * f_lo)) / (f_hi - f_lo);
+			println!("got here");
+			return Some(c - t);
+		}
 
 		if f.signum() == f_lo.signum() {
 			self.lower_bound = Some((t, f));
 		} else {
 			self.upper_bound = Some((t, f));
 		}
+		self.iterations += 1;
 
 		let (t_lo, f_lo) = self.lower_bound.unwrap();
 		let (t_hi, f_hi) = self.upper_bound.unwrap();
