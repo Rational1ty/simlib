@@ -117,7 +117,7 @@ impl<S> Executor<S> {
 		});
 	}
 
-	pub fn run(&mut self, mut sim: S) {
+	pub fn run(&mut self, mut sim: S) -> S {
 		let realtime_start = Instant::now();
 		self.run_phase(Phase::Init, &mut sim);
 
@@ -176,6 +176,8 @@ impl<S> Executor<S> {
 		if let Some(recorder) = &self.recorder {
 			recorder.write_csv().unwrap();
 		}
+
+		sim
 	}
 
 	fn run_phase(&mut self, phase: Phase, sim: &mut S) {
