@@ -1,6 +1,9 @@
 // TODO: remove this once sim is finished
-#![allow(dead_code)]
+#![expect(dead_code)]
 
+use std::time::Duration;
+
+use glam::DVec2;
 use simlib::{CrossingMode, Executor, Phase, Recorder};
 
 use crate::{
@@ -79,6 +82,17 @@ fn main() {
 		},
 	);
 
+	exec.add_dynamic_event(
+		|sim| sim.position.y,
+		CrossingMode::Decreasing,
+		|sim, time| {
+			println!("[GROUND] t={} vel_y={}", time.t, sim.velocity.y);
+			sim.velocity = DVec2::ZERO;
+			sim.angular_vel = 0.0;
+			sim.flight_phase = FlightPhase::Ground;
+		},
+	);
+
 	exec.add_job(Phase::Init, |sim, _| {
 		// println!("Starting sim with initial state: {:#?}", sim);
 		sim.orientation = sim.rail.angle;
@@ -87,12 +101,7 @@ fn main() {
 		println!("  rail: {} m at {:.2}°", sim.rail.length, 90.0 - sim.rail.angle.to_degrees());
 	});
 
-	exec.add_job(Phase::PreIntegrate, |sim, time| {
-		let steps_per_sec = (1.0 / time.dt).round() as u64;
-		if time.step % steps_per_sec != 0 {
-			return;
-		}
-
+	exec.add_scheduled_job(Duration::from_secs(1), |sim, time| {
 		let Rocket {
 			position,
 			velocity,
@@ -100,6 +109,7 @@ fn main() {
 			angular_vel,
 			..
 		} = &sim;
+
 		println!(
 			"t={:.3} | pos=({:.3}, {:.3}) vel=({:.3}, {:.3}) orientation={:.3} angular_vel={:.3}",
 			time.t, position.x, position.y, velocity.x, velocity.y, orientation, angular_vel

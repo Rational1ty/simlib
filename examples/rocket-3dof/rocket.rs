@@ -80,6 +80,10 @@ impl Rocket {
 	}
 
 	pub fn derivative(&mut self, time: &SimTime) -> Vec<f64> {
+		if self.flight_phase == FlightPhase::Ground {
+			return vec![0.0; 6];
+		}
+
 		let body_to_lcef_dcm = DMat2::from_angle(self.orientation);
 
 		// translational forces
