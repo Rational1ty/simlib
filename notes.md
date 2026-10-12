@@ -1,0 +1,16 @@
+Questions:
+- Should there be a `.step()` method? Then `.run()` could just be sugar for calling `.step()` in a loop
+	- Init/shutdown jobs and other things that don't run on every step (saving recorded data to file) complicate this
+		- Do we even need init/shutdown jobs? Probably not -- can just do those things before/after `.run()`
+		- Saving data could be moved out of the sim loop entirely and left up to the user
+		- Currently, recording doesn't allow the user to save periodically in case the sim crashes or for other reasons
+- Should the executor own the sim state?
+	- Don't think so; it might have some benefit but it's more restrictive
+		- Mujoco doesn't do it
+- Realtime executor should be a separate thing or left up to the user
+	- I.e., not in the main sim loop
+- Performance
+	- Biggest issue is cloning unnecessary data in sim state like LUTs and other static data
+		- Easiest way to fix is use `Rc`, reference to static, or provide a helper type `StaticData`
+		- For best performance, would probably need to restructure the whole thing to support DOD, SoA, SIMD, etc.
+			- ECS?
